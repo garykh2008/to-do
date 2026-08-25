@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -12,20 +12,31 @@ import {
 import { Menu } from "lucide-react";
 import { useReorderTodo } from "@/lib/queries";
 import { useRealtimeSync } from "@/lib/useRealtimeSync";
-import { resolveDropZone } from "@/lib/dndZones";
+import { resolveDropZone, type DropZone } from "@/lib/dndZones";
 import { DragOverContext, type DragOverState } from "@/lib/dragOverContext";
 import { ListSidebar } from "./ListSidebar";
 import type { TodoDragData } from "./TodoItem";
+
+interface ResolvedDragTarget {
+  overTodoId: string;
+  listId: string;
+  parentId: string | null;
+  zone: DropZone;
+  canNest: boolean;
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   useRealtimeSync();
   const reorderTodo = useReorderTodo();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dragOverState, setDragOverState] = useState<DragOverState | null>(null);
+  // 用 ref 記住 onDragOver 最後一次算出來的目標：onDragEnd 一律直接用這個，絕對不會重新量測，
+  // 保證使用者看到的插入線／巢狀化提示，跟放開後實際發生的動作百分之百一致。
+  const dragTargetRef = useRef<ResolvedDragTarget | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
-  function resolveTodoOverZone(event: DragEndEvent | DragOverEvent) {
+  function resolveTodoOverZone(event: DragOverEvent): ResolvedDragTarget | null {
     const { active, over } = event;
     if (!over) return null;
     const overId = String(over.id);
@@ -40,15 +51,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const canNest = overData.parentId === null && !activeData.hasChildren;
     const zone = resolveDropZone(active.rect.current.translated, over.rect, canNest);
 
-    return { overTodoId, overData, activeData, zone, canNest };
+    return { overTodoId, listId: overData.listId, parentId: overData.parentId, zone, canNest };
   }
 
   function handleDragOver(event: DragOverEvent) {
     const resolved = resolveTodoOverZone(event);
+    dragTargetRef.current = resolved;
     setDragOverState(resolved ? { todoId: resolved.overTodoId, zone: resolved.zone } : null);
   }
 
   function handleDragEnd(event: DragEndEvent) {
+    const target = dragTargetRef.current;
+    dragTargetRef.current = null;
     setDragOverState(null);
 
     const { active, over } = event;
@@ -75,31 +89,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const resolved = resolveTodoOverZone(event);
-    if (!resolved) return;
-    const { overTodoId, overData, zone, canNest } = resolved;
-    const targetListId = overData.listId;
+    if (!overId.startsWith("todo:")) return;
+    // target 是 onDragOver 最後一次算出來的（跟畫面上顯示的插入線/巢狀化提示同一份），
+    // 這裡只確認它還是對應同一個目標項目，不會再重新用 event 自己的座標算一次。
+    if (!target || target.overTodoId !== overId.slice("todo:".length)) return;
 
-    if (zone === "nest" && canNest) {
+    if (target.zone === "nest" && target.canNest) {
       reorderTodo.mutate({
         id: todoId,
         sourceListId,
-        targetListId,
-        targetParentId: overTodoId,
+        targetListId: target.listId,
+        targetParentId: target.overTodoId,
         anchorTodoId: null,
         anchorPosition: "after",
       });
       return;
     }
 
-    // 排序：插在 over 項目的前面或後面，實際鄰居由 mutation 內部重新查詢最新資料決定
     reorderTodo.mutate({
       id: todoId,
       sourceListId,
-      targetListId,
-      targetParentId: overData.parentId,
-      anchorTodoId: overTodoId,
-      anchorPosition: zone === "before" ? "before" : "after",
+      targetListId: target.listId,
+      targetParentId: target.parentId,
+      anchorTodoId: target.overTodoId,
+      anchorPosition: target.zone === "before" ? "before" : "after",
     });
   }
 
@@ -108,7 +121,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       sensors={sensors}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
-      onDragCancel={() => setDragOverState(null)}
+      onDragCancel={() => {
+        dragTargetRef.current = null;
+        setDragOverState(null);
+      }}
     >
       <DragOverContext.Provider value={dragOverState}>
         <div className="flex min-h-screen">
