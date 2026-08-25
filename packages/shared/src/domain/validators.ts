@@ -12,6 +12,7 @@ export const listUpdateSchema = listInsertSchema.partial();
 
 export const todoInsertSchema = z.object({
   list_id: z.string().uuid(),
+  parent_id: z.string().uuid().optional().nullable(),
   title: z.string().trim().min(1, "標題不能為空").max(500),
   notes: z.string().max(5000).optional(),
   due_date: z.string().date().optional().nullable(),
@@ -19,6 +20,7 @@ export const todoInsertSchema = z.object({
 
 export const todoUpdateSchema = z.object({
   list_id: z.string().uuid().optional(),
+  parent_id: z.string().uuid().optional().nullable(),
   title: z.string().trim().min(1).max(500).optional(),
   notes: z.string().max(5000).optional().nullable(),
   due_date: z.string().date().optional().nullable(),

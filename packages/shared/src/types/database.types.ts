@@ -1,5 +1,5 @@
 /**
- * 手動撰寫，結構對應 supabase/migrations/0001_init.sql。
+ * 手動撰寫，結構對應 supabase/migrations/0001_init.sql + 0002_todo_subitems.sql。
  * 待實際連上 VPS 上的 Supabase 之後，建議改用官方 CLI 重新產生：
  *   supabase gen types typescript --schema todo > src/types/database.types.ts
  */
@@ -47,6 +47,7 @@ export interface Database {
           id: string;
           user_id: string;
           list_id: string;
+          parent_id: string | null;
           title: string;
           notes: string | null;
           is_completed: boolean;
@@ -60,6 +61,7 @@ export interface Database {
           id?: string;
           user_id?: string;
           list_id: string;
+          parent_id?: string | null;
           title: string;
           notes?: string | null;
           is_completed?: boolean;
@@ -73,6 +75,7 @@ export interface Database {
           id?: string;
           user_id?: string;
           list_id?: string;
+          parent_id?: string | null;
           title?: string;
           notes?: string | null;
           is_completed?: boolean;
@@ -88,6 +91,13 @@ export interface Database {
             columns: ["list_id"];
             isOneToOne: false;
             referencedRelation: "lists";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "todos_parent_id_fkey";
+            columns: ["parent_id"];
+            isOneToOne: false;
+            referencedRelation: "todos";
             referencedColumns: ["id"];
           },
         ];

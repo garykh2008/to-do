@@ -8,6 +8,7 @@ import type { Todo } from "@to-do/shared";
 import { queryKeys, useReorderTodo } from "@/lib/queries";
 import { useRealtimeSync } from "@/lib/useRealtimeSync";
 import { ListSidebar } from "./ListSidebar";
+import type { TodoDragData } from "./TodoItem";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   useRealtimeSync();
@@ -21,35 +22,72 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const { active, over } = event;
     if (!over) return;
 
-    const activeData = active.data.current as { todoId: string; listId: string } | undefined;
+    const activeData = active.data.current as TodoDragData | undefined;
     if (!activeData) return;
-    const { todoId, listId: sourceListId } = activeData;
+    const { todoId, listId: sourceListId, parentId: sourceParentId, hasChildren: activeHasChildren } = activeData;
 
     const overId = String(over.id);
 
-    // 拖到側邊欄的清單上 -> 直接附加到該清單最後面
+    // 拖到側邊欄的清單上 -> 移到該清單頂層，附加到最後面
     if (overId.startsWith("list:")) {
       const targetListId = overId.slice("list:".length);
-      if (targetListId === sourceListId) return;
-      reorderTodo.mutate({ id: todoId, sourceListId, targetListId, beforeId: null, afterId: null });
+      if (targetListId === sourceListId && sourceParentId === null) return;
+      reorderTodo.mutate({
+        id: todoId,
+        sourceListId,
+        targetListId,
+        targetParentId: null,
+        beforeId: null,
+        afterId: null,
+      });
       return;
     }
 
-    // 拖到另一筆待辦事項上 -> 在同一份清單內重新排序
     if (overId.startsWith("todo:")) {
       const overTodoId = overId.slice("todo:".length);
-      const overData = over.data.current as { todoId: string; listId: string } | undefined;
-      const targetListId = overData?.listId ?? sourceListId;
+      if (overTodoId === todoId) return;
 
+      const overData = over.data.current as TodoDragData | undefined;
+      if (!overData) return;
+      const targetListId = overData.listId;
+
+      // 拖到目標項目正中間 -> 巢狀化成子項目；靠上/下邊緣 -> 排序
+      // 只允許一層巢狀：目標本身不能已經是子項目，被拖的項目也不能已經有自己的子項目
+      const activeRect = active.rect.current.translated;
+      const overRect = over.rect;
+      let wantsNest = false;
+      if (activeRect && overRect && overRect.height > 0) {
+        const activeCenterY = activeRect.top + activeRect.height / 2;
+        const relativeY = (activeCenterY - overRect.top) / overRect.height;
+        wantsNest = relativeY > 0.25 && relativeY < 0.75;
+      }
+      const canNest = wantsNest && overData.parentId === null && !activeHasChildren;
+
+      if (canNest) {
+        reorderTodo.mutate({
+          id: todoId,
+          sourceListId,
+          targetListId,
+          targetParentId: overTodoId,
+          beforeId: null,
+          afterId: null,
+        });
+        return;
+      }
+
+      // 排序：只在「同一個 parent + 同一個完成狀態」的兄弟項目之間排
+      const targetParentId = overData.parentId;
       const todos = queryClient.getQueryData<Todo[]>(queryKeys.todosByList(targetListId)) ?? [];
-      const incomplete = todos.filter((t) => !t.is_completed && t.id !== todoId);
-      const overIndex = incomplete.findIndex((t) => t.id === overTodoId);
+      const siblings = todos.filter(
+        (t) => t.parent_id === targetParentId && t.is_completed === overData.isCompleted && t.id !== todoId,
+      );
+      const overIndex = siblings.findIndex((t) => t.id === overTodoId);
       if (overIndex === -1) return;
 
-      const beforeId = incomplete[overIndex - 1]?.id ?? null;
-      const afterId = incomplete[overIndex]?.id ?? null;
+      const beforeId = siblings[overIndex - 1]?.id ?? null;
+      const afterId = siblings[overIndex]?.id ?? null;
 
-      reorderTodo.mutate({ id: todoId, sourceListId, targetListId, beforeId, afterId });
+      reorderTodo.mutate({ id: todoId, sourceListId, targetListId, targetParentId, beforeId, afterId });
     }
   }
 

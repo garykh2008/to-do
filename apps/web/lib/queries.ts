@@ -119,17 +119,21 @@ export function useAddTodo() {
       listId,
       title,
       dueDate,
+      parentId = null,
     }: {
       listId: string;
       title: string;
       dueDate?: string | null;
+      parentId?: string | null;
     }) => {
       const todos = queryClient.getQueryData<Todo[]>(queryKeys.todosByList(listId)) ?? [];
-      const lastPosition = todos.length ? Math.max(...todos.map((t) => t.position)) : null;
+      const siblings = todos.filter((t) => t.parent_id === parentId);
+      const lastPosition = siblings.length ? Math.max(...siblings.map((t) => t.position)) : null;
       const { data, error } = await supabase
         .from("todos")
         .insert({
           list_id: listId,
+          parent_id: parentId,
           title,
           due_date: dueDate ?? null,
           position: appendPosition(lastPosition),
@@ -185,9 +189,10 @@ export function useDeleteTodo() {
 }
 
 /**
- * 拖曳排序/跨清單移動共用的 mutation。
- * beforeId/afterId 是「移動後」在目標清單中緊鄰的待辦事項 id（沒有則傳 null），
- * 每次都直接向 Supabase 重新查詢目標清單目前的實際順序，避免依賴前端快取的舊資料算錯 position。
+ * 拖曳排序/跨清單移動/巢狀化共用的 mutation。
+ * beforeId/afterId 是「移動後」在目標清單 + 目標 parent 底下緊鄰的待辦事項 id（沒有則傳 null），
+ * 每次都直接向 Supabase 重新查詢目標範圍目前的實際順序，避免依賴前端快取的舊資料算錯 position。
+ * targetParentId 傳 null 代表移到頂層；傳某個 todo id 代表變成該 todo 的子項目。
  */
 export function useReorderTodo() {
   const supabase = createClient();
@@ -196,20 +201,25 @@ export function useReorderTodo() {
     mutationFn: async ({
       id,
       targetListId,
+      targetParentId,
       beforeId,
       afterId,
     }: {
       id: string;
       sourceListId: string;
       targetListId: string;
+      targetParentId: string | null;
       beforeId: string | null;
       afterId: string | null;
     }) => {
-      const { data: siblings, error: fetchError } = await supabase
+      let siblingsQuery = supabase
         .from("todos")
         .select("id, position")
         .eq("list_id", targetListId)
         .order("position", { ascending: true });
+      siblingsQuery =
+        targetParentId === null ? siblingsQuery.is("parent_id", null) : siblingsQuery.eq("parent_id", targetParentId);
+      const { data: siblings, error: fetchError } = await siblingsQuery;
       if (fetchError) throw fetchError;
 
       const others = (siblings ?? []).filter((t) => t.id !== id);
@@ -238,7 +248,7 @@ export function useReorderTodo() {
 
       const { error } = await supabase
         .from("todos")
-        .update({ list_id: targetListId, position: targetPosition })
+        .update({ list_id: targetListId, parent_id: targetParentId, position: targetPosition })
         .eq("id", id);
       if (error) throw error;
     },
