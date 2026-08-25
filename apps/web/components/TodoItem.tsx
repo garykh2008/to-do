@@ -3,9 +3,10 @@
 import { useState, type FormEvent } from "react";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CalendarDays, ChevronDown, ChevronRight, GripVertical, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronRight, CornerDownRight, GripVertical, Plus, Trash2 } from "lucide-react";
 import type { Todo } from "@to-do/shared";
 import { useAddTodo, useDeleteTodo, useUpdateTodo } from "@/lib/queries";
+import { useDragOverState } from "@/lib/dragOverContext";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -43,7 +44,7 @@ export function TodoItem({
     hasChildren: childTodos.length > 0,
   };
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `todo:${todo.id}`,
     data: dragData,
   });
@@ -55,6 +56,7 @@ export function TodoItem({
   };
 
   const isOverdue = !!todo.due_date && !todo.is_completed && todo.due_date < TODAY;
+  const dragZone = useDragOverState(todo.id);
 
   function handleAddSub(event: FormEvent) {
     event.preventDefault();
@@ -66,13 +68,22 @@ export function TodoItem({
 
   return (
     <div className="flex flex-col gap-1.5">
+      {dragZone === "before" && <div className="mx-2 h-1 rounded-full bg-accent-500" />}
+
       <div
         ref={setNodeRef}
         style={style}
-        className={`group flex flex-wrap items-center gap-2.5 rounded-lg border bg-white px-3 py-2.5 shadow-card transition-shadow hover:shadow-popover ${
-          isOver ? "border-accent-400 ring-2 ring-accent-200" : "border-neutral-200"
+        className={`group relative flex flex-wrap items-center gap-2.5 rounded-lg border bg-white px-3 py-2.5 shadow-card transition-shadow hover:shadow-popover ${
+          dragZone === "nest" ? "border-accent-500 bg-accent-50 ring-2 ring-accent-300" : "border-neutral-200"
         }`}
       >
+        {dragZone === "nest" && (
+          <span className="absolute -top-2 right-2 flex items-center gap-1 rounded-full bg-accent-600 px-2 py-0.5 text-[10px] font-medium text-white shadow-popover">
+            <CornerDownRight size={10} />
+            變成子項目
+          </span>
+        )}
+
         {!isChild && childTodos.length > 0 ? (
           <button
             type="button"
@@ -177,6 +188,8 @@ export function TodoItem({
           <Trash2 size={14} />
         </button>
       </div>
+
+      {dragZone === "after" && <div className="mx-2 h-1 rounded-full bg-accent-500" />}
 
       {addingSub && (
         <form onSubmit={handleAddSub} className="ml-7 flex items-center gap-2">

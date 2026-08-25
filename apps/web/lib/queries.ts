@@ -212,6 +212,32 @@ export function useReorderTodo() {
       beforeId: string | null;
       afterId: string | null;
     }) => {
+      // 巢狀化之前用最新資料重新驗證一次，避免拖曳快取還沒更新完就連續操作，
+      // 造成循環參照（例如兩個項目互為彼此的子項目）—— 這種資料一旦寫進去，
+      // 兩個項目都會因為「父鏈找不到頂層」而從畫面上完全消失。
+      if (targetParentId !== null) {
+        if (targetParentId === id) {
+          throw new Error("不能把項目拖到自己身上");
+        }
+        const { data: targetRow, error: targetError } = await supabase
+          .from("todos")
+          .select("parent_id")
+          .eq("id", targetParentId)
+          .single();
+        if (targetError) throw targetError;
+        if (targetRow.parent_id !== null) {
+          throw new Error("目標項目已經是子項目，不能再巢狀化");
+        }
+        const { count, error: childError } = await supabase
+          .from("todos")
+          .select("id", { count: "exact", head: true })
+          .eq("parent_id", id);
+        if (childError) throw childError;
+        if ((count ?? 0) > 0) {
+          throw new Error("這個項目已經有子項目，不能再變成別人的子項目");
+        }
+      }
+
       let siblingsQuery = supabase
         .from("todos")
         .select("id, position")
