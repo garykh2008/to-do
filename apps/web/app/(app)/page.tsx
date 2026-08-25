@@ -4,7 +4,11 @@ import { useLists } from "@/lib/queries";
 import { TodoListView } from "@/components/TodoListView";
 
 export default function HomePage() {
-  const { data: lists = [], isLoading } = useLists();
+  const { data: lists = [], isLoading, error } = useLists();
+
+  if (error) {
+    return <p className="p-6 text-sm text-red-600">讀取清單失敗：{error.message}</p>;
+  }
 
   if (isLoading) {
     return <p className="p-6 text-sm text-neutral-400">載入中…</p>;

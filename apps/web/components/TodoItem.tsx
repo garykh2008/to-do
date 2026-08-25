@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { CalendarDays, GripVertical, Trash2 } from "lucide-react";
 import type { Todo } from "@to-do/shared";
 import { useDeleteTodo, useUpdateTodo } from "@/lib/queries";
+
+const TODAY = new Date().toISOString().slice(0, 10);
 
 export function TodoItem({ todo }: { todo: Todo }) {
   const updateTodo = useUpdateTodo();
@@ -23,20 +26,22 @@ export function TodoItem({ todo }: { todo: Todo }) {
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const isOverdue = !!todo.due_date && !todo.is_completed && todo.due_date < TODAY;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 rounded-md border border-neutral-200 bg-white px-3 py-2"
+      className="group flex items-center gap-2.5 rounded-lg border border-neutral-200 bg-white px-3 py-2.5 shadow-card transition-shadow hover:shadow-popover"
     >
       <button
         type="button"
         {...attributes}
         {...listeners}
-        className="cursor-grab select-none text-neutral-300 hover:text-neutral-500 active:cursor-grabbing"
+        className="cursor-grab text-neutral-300 opacity-0 group-hover:opacity-100 hover:text-neutral-500 active:cursor-grabbing"
         aria-label="拖曳排序"
       >
-        ⠿
+        <GripVertical size={15} />
       </button>
 
       <input
@@ -45,7 +50,7 @@ export function TodoItem({ todo }: { todo: Todo }) {
         onChange={(e) =>
           updateTodo.mutate({ id: todo.id, listId: todo.list_id, is_completed: e.target.checked })
         }
-        className="h-4 w-4 shrink-0"
+        className="h-4 w-4 shrink-0 rounded"
       />
 
       {editingTitle ? (
@@ -68,34 +73,45 @@ export function TodoItem({ todo }: { todo: Todo }) {
               setEditingTitle(false);
             }
           }}
-          className="flex-1 rounded border border-neutral-300 px-1 py-0.5 text-sm outline-none"
+          className="flex-1 rounded border border-accent-300 px-1 py-0.5 text-sm outline-none"
         />
       ) : (
         <button
           type="button"
           onClick={() => setEditingTitle(true)}
-          className={`flex-1 truncate text-left text-sm ${todo.is_completed ? "text-neutral-400 line-through" : ""}`}
+          className={`flex-1 truncate text-left text-sm ${todo.is_completed ? "text-neutral-400 line-through" : "text-neutral-800"}`}
         >
           {todo.title}
         </button>
       )}
 
-      <input
-        type="date"
-        value={todo.due_date ?? ""}
-        onChange={(e) =>
-          updateTodo.mutate({ id: todo.id, listId: todo.list_id, due_date: e.target.value || null })
-        }
-        className="shrink-0 rounded border border-neutral-200 px-1 py-0.5 text-xs text-neutral-600 outline-none"
-      />
+      <label
+        className={`flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs ${
+          isOverdue
+            ? "border-red-200 bg-red-50 text-red-600"
+            : todo.due_date
+              ? "border-neutral-200 bg-neutral-50 text-neutral-600"
+              : "border-transparent text-neutral-300 hover:border-neutral-200 hover:text-neutral-400"
+        }`}
+      >
+        <CalendarDays size={12} />
+        <input
+          type="date"
+          value={todo.due_date ?? ""}
+          onChange={(e) =>
+            updateTodo.mutate({ id: todo.id, listId: todo.list_id, due_date: e.target.value || null })
+          }
+          className="w-[6.5rem] bg-transparent outline-none"
+        />
+      </label>
 
       <button
         type="button"
         onClick={() => deleteTodo.mutate({ id: todo.id, listId: todo.list_id })}
-        className="shrink-0 rounded px-1 text-xs text-neutral-400 hover:text-red-600"
+        className="shrink-0 rounded p-1 text-neutral-300 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600"
         aria-label="刪除"
       >
-        ✕
+        <Trash2 size={14} />
       </button>
     </div>
   );

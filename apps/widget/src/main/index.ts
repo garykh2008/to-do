@@ -16,6 +16,8 @@ function createWindow(): void {
     alwaysOnTop: true,
     title: "TODO 小工具",
     icon: resourcePath("icon.png"),
+    frame: false,
+    backgroundColor: "#fafafa",
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
@@ -41,6 +43,9 @@ app.whenReady().then(() => {
   ipcMain.handle("secure-store:get", (_event, key: string) => secureGetItem(key));
   ipcMain.handle("secure-store:set", (_event, key: string, value: string) => secureSetItem(key, value));
   ipcMain.handle("secure-store:remove", (_event, key: string) => secureRemoveItem(key));
+
+  ipcMain.on("window:minimize", () => mainWindow?.minimize());
+  ipcMain.on("window:close", () => mainWindow?.close());
 
   createWindow();
   if (mainWindow) createTray(mainWindow);

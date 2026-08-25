@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import { CircleCheck, GripVertical } from "lucide-react";
 import type { List, Todo } from "@to-do/shared";
+
+const TODAY = new Date().toISOString().slice(0, 10);
 
 function TodoRow({
   todo,
@@ -26,6 +29,8 @@ function TodoRow({
     ? { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.5 : 1 }
     : undefined;
 
+  const isOverdue = !!todo.due_date && todo.due_date < TODAY;
+
   return (
     <div
       ref={setNodeRef}
@@ -34,24 +39,24 @@ function TodoRow({
         e.preventDefault();
         setMenuPos({ x: e.clientX, y: e.clientY });
       }}
-      className="relative flex items-center gap-2 rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs"
+      className="relative flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs shadow-card"
     >
       <span
         {...attributes}
         {...listeners}
-        className="cursor-grab select-none text-neutral-300 active:cursor-grabbing"
+        className="cursor-grab text-neutral-300 hover:text-neutral-400 active:cursor-grabbing"
       >
-        ⠿
+        <GripVertical size={13} />
       </span>
       <input
         type="checkbox"
         checked={todo.is_completed}
         onChange={(e) => onToggle(todo.id, e.target.checked)}
-        className="h-3.5 w-3.5 shrink-0"
+        className="h-3.5 w-3.5 shrink-0 rounded"
       />
       <div className="min-w-0 flex-1">
         <p className="truncate">{todo.title}</p>
-        <p className="truncate text-[10px] text-neutral-400">
+        <p className={`truncate text-[10px] ${isOverdue ? "font-medium text-red-500" : "text-neutral-400"}`}>
           {listName}
           {todo.due_date ? ` · ${todo.due_date}` : ""}
         </p>
@@ -62,7 +67,7 @@ function TodoRow({
           {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
           <div className="fixed inset-0 z-10" onClick={() => setMenuPos(null)} />
           <div
-            className="fixed z-20 min-w-[120px] rounded-md border border-neutral-200 bg-white py-1 text-xs shadow-lg"
+            className="fixed z-20 min-w-[120px] rounded-md border border-neutral-200 bg-white py-1 text-xs shadow-popover"
             style={{ left: menuPos.x, top: menuPos.y }}
           >
             <p className="px-2 py-1 text-neutral-400">移到清單</p>
@@ -102,7 +107,12 @@ export function CompactList({
 
   return (
     <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto p-2">
-      {todos.length === 0 && <p className="p-2 text-center text-xs text-neutral-400">目前沒有待辦事項</p>}
+      {todos.length === 0 && (
+        <div className="flex flex-1 flex-col items-center justify-center gap-1.5 py-6 text-neutral-300">
+          <CircleCheck size={22} />
+          <p className="text-xs text-neutral-400">目前沒有待辦事項</p>
+        </div>
+      )}
       {todos.map((todo) => (
         <TodoRow
           key={todo.id}

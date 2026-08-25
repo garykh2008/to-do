@@ -6,4 +6,10 @@ const authStorage = {
   removeItem: (key: string): Promise<void> => ipcRenderer.invoke("secure-store:remove", key),
 };
 
+const windowControls = {
+  minimize: (): void => ipcRenderer.send("window:minimize"),
+  close: (): void => ipcRenderer.send("window:close"),
+};
+
 contextBridge.exposeInMainWorld("authStorage", authStorage);
+contextBridge.exposeInMainWorld("windowControls", windowControls);
