@@ -21,6 +21,9 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
+      // 常駐在系統匣時視窗會被隱藏；預設 Chromium 會節流背景頁面的計時器，
+      // 導致 supabase-js 排程好的 token 自動刷新沒有準時執行，重新打開後就變成已登出。
+      backgroundThrottling: false,
     },
   });
 
