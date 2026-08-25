@@ -1,0 +1,5 @@
+# 個人 TODO 工具 (Next.js, docker-compose.todo.yml 裡的 todo-web)
+
+todo.garyhsieh-proj.com {
+	reverse_proxy 127.0.0.1:3300
+}
