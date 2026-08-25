@@ -32,13 +32,13 @@ export function TodoItem({ todo }: { todo: Todo }) {
     <div
       ref={setNodeRef}
       style={style}
-      className="group flex items-center gap-2.5 rounded-lg border border-neutral-200 bg-white px-3 py-2.5 shadow-card transition-shadow hover:shadow-popover"
+      className="group flex flex-wrap items-center gap-2.5 rounded-lg border border-neutral-200 bg-white px-3 py-2.5 shadow-card transition-shadow hover:shadow-popover"
     >
       <button
         type="button"
         {...attributes}
         {...listeners}
-        className="cursor-grab text-neutral-300 opacity-0 group-hover:opacity-100 hover:text-neutral-500 active:cursor-grabbing"
+        className="cursor-grab text-neutral-300 hover:text-neutral-500 active:cursor-grabbing md:opacity-0 md:group-hover:opacity-100"
         aria-label="拖曳排序"
       >
         <GripVertical size={15} />
@@ -79,7 +79,7 @@ export function TodoItem({ todo }: { todo: Todo }) {
         <button
           type="button"
           onClick={() => setEditingTitle(true)}
-          className={`flex-1 truncate text-left text-sm ${todo.is_completed ? "text-neutral-400 line-through" : "text-neutral-800"}`}
+          className={`min-w-[6rem] flex-1 truncate text-left text-sm ${todo.is_completed ? "text-neutral-400 line-through" : "text-neutral-800"}`}
         >
           {todo.title}
         </button>
@@ -108,7 +108,7 @@ export function TodoItem({ todo }: { todo: Todo }) {
       <button
         type="button"
         onClick={() => deleteTodo.mutate({ id: todo.id, listId: todo.list_id })}
-        className="shrink-0 rounded p-1 text-neutral-300 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600"
+        className="shrink-0 rounded p-1 text-neutral-300 hover:bg-red-50 hover:text-red-600 md:opacity-0 md:group-hover:opacity-100"
         aria-label="刪除"
       >
         <Trash2 size={14} />

@@ -46,9 +46,9 @@ export function CalendarGrid() {
   const selectedTodos = selectedKey ? (todosByDay.get(selectedKey) ?? []) : [];
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4 p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold text-neutral-800">
+    <div className="mx-auto flex max-w-3xl min-w-0 flex-col gap-4 p-4 md:p-8">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="flex items-center gap-2 text-xl font-semibold text-neutral-800 md:text-2xl">
           <CalendarDays size={22} className="text-accent-600" />
           {format(currentMonth, "yyyy年 M月")}
         </h1>
@@ -87,7 +87,7 @@ export function CalendarGrid() {
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1.5">
+      <div className="grid grid-cols-7 gap-1 md:gap-1.5">
         {days.map((day) => {
           const key = format(day, "yyyy-MM-dd");
           const dayTodos = todosByDay.get(key) ?? [];
@@ -102,7 +102,7 @@ export function CalendarGrid() {
               key={key}
               type="button"
               onClick={() => setSelectedDay(day)}
-              className={`flex h-28 flex-col items-start gap-1 overflow-hidden rounded-lg border p-1.5 text-left text-xs transition-colors ${
+              className={`flex h-14 flex-col items-start gap-1 overflow-hidden rounded-lg border p-1 text-left text-xs transition-colors md:h-28 md:p-1.5 ${
                 selected
                   ? "border-accent-500 bg-accent-50"
                   : isToday(day)
@@ -119,7 +119,15 @@ export function CalendarGrid() {
               >
                 {format(day, "d")}
               </span>
-              <div className="flex w-full min-w-0 flex-1 flex-col gap-0.5 overflow-hidden">
+
+              {/* 手機螢幕太窄放不下項目標題，只顯示數量圓標，完整內容看下方選中日期的清單 */}
+              {dayTodos.length > 0 && (
+                <span className="mt-auto flex items-center gap-1 self-end rounded-full bg-neutral-800 px-1.5 py-0.5 text-[9px] font-medium text-white md:hidden">
+                  {dayTodos.length}
+                </span>
+              )}
+
+              <div className="hidden w-full min-w-0 flex-1 flex-col gap-0.5 overflow-hidden md:flex">
                 {visibleTodos.map((todo) => (
                   <span
                     key={todo.id}

@@ -13,7 +13,7 @@ export function TodoListView({ listId, listName }: { listId: string; listName: s
   const completed = todos.filter((t) => t.is_completed);
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 p-8">
+    <div className="mx-auto flex max-w-2xl min-w-0 flex-col gap-4 p-4 md:p-8">
       <h1 className="text-2xl font-semibold text-neutral-800">{listName}</h1>
 
       <AddTodoForm listId={listId} />

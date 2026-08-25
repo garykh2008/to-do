@@ -14,3 +14,4 @@ Thumbs.db
 .vite/
 electron-builder-output/
 *.tsbuildinfo
+.claude/scheduled_tasks.lock
