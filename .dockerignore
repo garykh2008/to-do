@@ -1,0 +1,12 @@
+**/node_modules
+**/.next
+**/out
+**/dist
+apps/widget/out
+apps/widget/release
+.git
+.claude
+*.tsbuildinfo
+**/.env
+**/.env.local
+**/.env.*.local

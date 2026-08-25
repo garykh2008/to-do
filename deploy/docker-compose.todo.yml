@@ -1,0 +1,18 @@
+# 在 VPS 上執行（於這個檔案所在目錄）：
+#   docker compose -f docker-compose.todo.yml up -d --build
+#
+# 需要同目錄下有一個 .env，內容參考 .env.example
+
+services:
+  todo-web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    container_name: todo-web
+    restart: unless-stopped
+    ports:
+      # 只綁定在 127.0.0.1，對外不直接開放，由 Caddy 反向代理
+      - "127.0.0.1:3300:3000"
