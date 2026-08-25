@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.next/
+out/
+build/
+release/
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+Thumbs.db
+.turbo/
+.vite/
+electron-builder-output/
+*.tsbuildinfo
