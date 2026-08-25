@@ -14,7 +14,6 @@ export interface TodoDragData {
   todoId: string;
   listId: string;
   parentId: string | null;
-  isCompleted: boolean;
   hasChildren: boolean;
 }
 
@@ -40,7 +39,6 @@ export function TodoItem({
     todoId: todo.id,
     listId: todo.list_id,
     parentId: todo.parent_id,
-    isCompleted: todo.is_completed,
     hasChildren: childTodos.length > 0,
   };
 

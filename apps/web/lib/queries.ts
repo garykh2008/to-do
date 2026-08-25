@@ -190,8 +190,9 @@ export function useDeleteTodo() {
 
 /**
  * 拖曳排序/跨清單移動/巢狀化共用的 mutation。
- * beforeId/afterId 是「移動後」在目標清單 + 目標 parent 底下緊鄰的待辦事項 id（沒有則傳 null），
- * 每次都直接向 Supabase 重新查詢目標範圍目前的實際順序，避免依賴前端快取的舊資料算錯 position。
+ * anchorTodoId/anchorPosition 描述「要插在哪個項目的前面或後面」（anchorTodoId 傳 null 代表附加到最後）；
+ * 實際的 beforeId/afterId 一律從這裡重新查詢 Supabase 的最新順序反推，不依賴前端快取算 —
+ * 前端快取可能還沒吃到上一次操作的結果，用它算鄰居會找不到、直接整個排序動作沒反應。
  * targetParentId 傳 null 代表移到頂層；傳某個 todo id 代表變成該 todo 的子項目。
  */
 export function useReorderTodo() {
@@ -202,15 +203,15 @@ export function useReorderTodo() {
       id,
       targetListId,
       targetParentId,
-      beforeId,
-      afterId,
+      anchorTodoId,
+      anchorPosition,
     }: {
       id: string;
       sourceListId: string;
       targetListId: string;
       targetParentId: string | null;
-      beforeId: string | null;
-      afterId: string | null;
+      anchorTodoId: string | null;
+      anchorPosition: "before" | "after";
     }) => {
       // 巢狀化之前用最新資料重新驗證一次，避免拖曳快取還沒更新完就連續操作，
       // 造成循環參照（例如兩個項目互為彼此的子項目）—— 這種資料一旦寫進去，
@@ -249,6 +250,23 @@ export function useReorderTodo() {
       if (fetchError) throw fetchError;
 
       const others = (siblings ?? []).filter((t) => t.id !== id);
+
+      // 用「剛從資料庫查回來的」順序反推 beforeId/afterId，而不是相信呼叫端傳進來的猜測
+      let beforeId: string | null = null;
+      let afterId: string | null = null;
+      if (anchorTodoId) {
+        const anchorIndex = others.findIndex((t) => t.id === anchorTodoId);
+        if (anchorIndex !== -1) {
+          if (anchorPosition === "before") {
+            beforeId = others[anchorIndex - 1]?.id ?? null;
+            afterId = anchorTodoId;
+          } else {
+            beforeId = anchorTodoId;
+            afterId = others[anchorIndex + 1]?.id ?? null;
+          }
+        }
+      }
+
       const before = beforeId ? (others.find((t) => t.id === beforeId)?.position ?? null) : null;
       const after = afterId ? (others.find((t) => t.id === afterId)?.position ?? null) : null;
 

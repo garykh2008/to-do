@@ -9,10 +9,8 @@ import {
   type DragEndEvent,
   type DragOverEvent,
 } from "@dnd-kit/core";
-import { useQueryClient } from "@tanstack/react-query";
 import { Menu } from "lucide-react";
-import type { Todo } from "@to-do/shared";
-import { queryKeys, useReorderTodo } from "@/lib/queries";
+import { useReorderTodo } from "@/lib/queries";
 import { useRealtimeSync } from "@/lib/useRealtimeSync";
 import { resolveDropZone } from "@/lib/dndZones";
 import { DragOverContext, type DragOverState } from "@/lib/dragOverContext";
@@ -21,7 +19,6 @@ import type { TodoDragData } from "./TodoItem";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   useRealtimeSync();
-  const queryClient = useQueryClient();
   const reorderTodo = useReorderTodo();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dragOverState, setDragOverState] = useState<DragOverState | null>(null);
@@ -72,8 +69,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         sourceListId,
         targetListId,
         targetParentId: null,
-        beforeId: null,
-        afterId: null,
+        anchorTodoId: null,
+        anchorPosition: "after",
       });
       return;
     }
@@ -89,26 +86,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         sourceListId,
         targetListId,
         targetParentId: overTodoId,
-        beforeId: null,
-        afterId: null,
+        anchorTodoId: null,
+        anchorPosition: "after",
       });
       return;
     }
 
-    // 排序：只在「同一個 parent + 同一個完成狀態」的兄弟項目之間排
-    const targetParentId = overData.parentId;
-    const todos = queryClient.getQueryData<Todo[]>(queryKeys.todosByList(targetListId)) ?? [];
-    const siblings = todos.filter(
-      (t) => t.parent_id === targetParentId && t.is_completed === overData.isCompleted && t.id !== todoId,
-    );
-    const overIndex = siblings.findIndex((t) => t.id === overTodoId);
-    if (overIndex === -1) return;
-
-    // zone === "before"：插在 over 項目前面；zone === "after"：插在 over 項目後面
-    const beforeId = zone === "before" ? (siblings[overIndex - 1]?.id ?? null) : overTodoId;
-    const afterId = zone === "before" ? overTodoId : (siblings[overIndex + 1]?.id ?? null);
-
-    reorderTodo.mutate({ id: todoId, sourceListId, targetListId, targetParentId, beforeId, afterId });
+    // 排序：插在 over 項目的前面或後面，實際鄰居由 mutation 內部重新查詢最新資料決定
+    reorderTodo.mutate({
+      id: todoId,
+      sourceListId,
+      targetListId,
+      targetParentId: overData.parentId,
+      anchorTodoId: overTodoId,
+      anchorPosition: zone === "before" ? "before" : "after",
+    });
   }
 
   return (
