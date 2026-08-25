@@ -9,7 +9,15 @@ import type { List } from "@to-do/shared";
 import { useAddList, useDeleteList, useLists, useRenameList } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 
-function ListRow({ list, isActive }: { list: List; isActive: boolean }) {
+function ListRow({
+  list,
+  isActive,
+  onNavigate,
+}: {
+  list: List;
+  isActive: boolean;
+  onNavigate?: () => void;
+}) {
   const { setNodeRef, isOver } = useDroppable({ id: `list:${list.id}` });
   const renameList = useRenameList();
   const deleteList = useDeleteList();
@@ -60,7 +68,7 @@ function ListRow({ list, isActive }: { list: List; isActive: boolean }) {
         />
       ) : (
         <>
-          <Link href={`/lists/${list.id}`} className="flex-1 truncate">
+          <Link href={`/lists/${list.id}`} onClick={onNavigate} className="flex-1 truncate">
             {list.name}
           </Link>
           <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
@@ -93,7 +101,7 @@ function ListRow({ list, isActive }: { list: List; isActive: boolean }) {
   );
 }
 
-export function ListSidebar() {
+export function ListSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { data: lists = [] } = useLists();
   const addList = useAddList();
   const pathname = usePathname();
@@ -102,7 +110,7 @@ export function ListSidebar() {
   const [newListName, setNewListName] = useState("");
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col gap-1 border-r border-neutral-200 bg-white p-3">
+    <aside className="flex h-full w-60 shrink-0 flex-col gap-1 border-r border-neutral-200 bg-white p-3 shadow-lg md:shadow-none">
       <div className="mb-2 flex items-center gap-2 px-2 py-1">
         {/* eslint-disable-next-line @next/next/no-img-element -- 固定小尺寸的 App icon，不需要 next/image 的最佳化 */}
         <img src="/icon.png" alt="" className="h-7 w-7 rounded-lg" />
@@ -111,6 +119,7 @@ export function ListSidebar() {
 
       <Link
         href="/"
+        onClick={onNavigate}
         className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
           pathname === "/" ? "bg-accent-50 text-accent-700" : "text-neutral-700 hover:bg-neutral-100"
         }`}
@@ -120,6 +129,7 @@ export function ListSidebar() {
       </Link>
       <Link
         href="/calendar"
+        onClick={onNavigate}
         className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
           pathname === "/calendar" ? "bg-accent-50 text-accent-700" : "text-neutral-700 hover:bg-neutral-100"
         }`}
@@ -132,7 +142,12 @@ export function ListSidebar() {
 
       <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
         {lists.map((list) => (
-          <ListRow key={list.id} list={list} isActive={pathname === `/lists/${list.id}`} />
+          <ListRow
+            key={list.id}
+            list={list}
+            isActive={pathname === `/lists/${list.id}`}
+            onNavigate={onNavigate}
+          />
         ))}
       </div>
 
