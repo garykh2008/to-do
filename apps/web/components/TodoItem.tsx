@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { CalendarDays, ChevronDown, ChevronRight, CornerDownRight, GripVertical, Plus, Trash2 } from "lucide-react";
 import type { Todo } from "@to-do/shared";
@@ -44,14 +44,22 @@ export function TodoItem({
     hasChildren: childTodos.length > 0,
   };
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
+    id: `todo:${todo.id}`,
+    data: dragData,
+  });
+  const { setNodeRef: setDropRef } = useDroppable({
     id: `todo:${todo.id}`,
     data: dragData,
   });
 
+  function setNodeRef(node: HTMLDivElement | null) {
+    setDragRef(node);
+    setDropRef(node);
+  }
+
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+    transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.5 : 1,
   };
 
@@ -211,13 +219,11 @@ export function TodoItem({
       )}
 
       {!isChild && expanded && childTodos.length > 0 && (
-        <SortableContext items={childTodos.map((c) => `todo:${c.id}`)} strategy={verticalListSortingStrategy}>
-          <div className="ml-7 flex flex-col gap-1.5 border-l-2 border-neutral-100 pl-3">
-            {childTodos.map((child) => (
-              <TodoItem key={child.id} todo={child} isChild />
-            ))}
-          </div>
-        </SortableContext>
+        <div className="ml-7 flex flex-col gap-1.5 border-l-2 border-neutral-100 pl-3">
+          {childTodos.map((child) => (
+            <TodoItem key={child.id} todo={child} isChild />
+          ))}
+        </div>
       )}
     </div>
   );
