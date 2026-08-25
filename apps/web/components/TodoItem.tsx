@@ -67,8 +67,14 @@ export function TodoItem({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {dragZone === "before" && <div className="mx-2 h-1 rounded-full bg-accent-500" />}
+    <div className="relative flex flex-col gap-1.5">
+      {/* 用絕對定位疊加的插入線，不佔文件流的空間，避免拖曳時項目因為線條出現/消失而跳動 */}
+      {dragZone === "before" && (
+        <div className="pointer-events-none absolute -top-[7px] right-0 left-0 z-10 mx-2 h-1 rounded-full bg-accent-500" />
+      )}
+      {dragZone === "after" && (
+        <div className="pointer-events-none absolute -bottom-[7px] right-0 left-0 z-10 mx-2 h-1 rounded-full bg-accent-500" />
+      )}
 
       <div
         ref={setNodeRef}
@@ -188,8 +194,6 @@ export function TodoItem({
           <Trash2 size={14} />
         </button>
       </div>
-
-      {dragZone === "after" && <div className="mx-2 h-1 rounded-full bg-accent-500" />}
 
       {addingSub && (
         <form onSubmit={handleAddSub} className="ml-7 flex items-center gap-2">
