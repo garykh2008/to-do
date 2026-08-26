@@ -10,7 +10,7 @@ export function useTodoData() {
   const reload = useCallback(async () => {
     const [{ data: listData }, { data: todoData }] = await Promise.all([
       supabase.from("lists").select("*").order("position", { ascending: true }),
-      supabase.from("todos").select("*").eq("is_completed", false).order("position", { ascending: true }),
+      supabase.from("todos").select("*").order("position", { ascending: true }),
     ]);
     setLists(listData ?? []);
     setTodos(todoData ?? []);
@@ -73,5 +73,47 @@ export function useTodoData() {
     [reload],
   );
 
-  return { lists, todos, loading, inboxList, addTodo, moveTodoToList, toggleComplete };
+  const deleteTodo = useCallback(
+    async (todoId: string) => {
+      await supabase.from("todos").delete().eq("id", todoId);
+      reload();
+    },
+    [reload],
+  );
+
+  const addSubTodo = useCallback(
+    async (parentTodo: Todo, title: string) => {
+      const siblings = todos.filter((t) => t.parent_id === parentTodo.id);
+      const lastPosition = siblings.length ? Math.max(...siblings.map((t) => t.position)) : null;
+      await supabase.from("todos").insert({
+        list_id: parentTodo.list_id,
+        parent_id: parentTodo.id,
+        title,
+        position: appendPosition(lastPosition),
+      });
+      reload();
+    },
+    [todos, reload],
+  );
+
+  const updateDueDate = useCallback(
+    async (todoId: string, dueDate: string | null) => {
+      await supabase.from("todos").update({ due_date: dueDate }).eq("id", todoId);
+      reload();
+    },
+    [reload],
+  );
+
+  return {
+    lists,
+    todos,
+    loading,
+    inboxList,
+    addTodo,
+    moveTodoToList,
+    toggleComplete,
+    deleteTodo,
+    addSubTodo,
+    updateDueDate,
+  };
 }

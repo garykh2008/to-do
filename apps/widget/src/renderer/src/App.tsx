@@ -12,7 +12,8 @@ import { ListChips } from "./components/ListChips";
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
-  const { lists, todos, loading, addTodo, moveTodoToList, toggleComplete } = useTodoData();
+  const { lists, todos, loading, addTodo, moveTodoToList, toggleComplete, deleteTodo, addSubTodo, updateDueDate } =
+    useTodoData();
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
 
   const visibleTodos = selectedListId ? todos.filter((t) => t.list_id === selectedListId) : todos;
@@ -47,7 +48,15 @@ export default function App() {
             {loading ? (
               <div className="flex flex-1 items-center justify-center text-sm text-neutral-400">載入中…</div>
             ) : (
-              <CompactList todos={visibleTodos} lists={lists} onToggle={toggleComplete} onMove={moveTodoToList} />
+              <CompactList
+                todos={visibleTodos}
+                lists={lists}
+                onToggle={toggleComplete}
+                onMove={moveTodoToList}
+                onDelete={deleteTodo}
+                onAddSub={addSubTodo}
+                onUpdateDueDate={updateDueDate}
+              />
             )}
             <ListChips lists={lists} selectedListId={selectedListId} onSelectList={setSelectedListId} />
             <button
