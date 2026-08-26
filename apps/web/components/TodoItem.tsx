@@ -34,6 +34,7 @@ export function TodoItem({
   const [expanded, setExpanded] = useState(true);
   const [addingSub, setAddingSub] = useState(false);
   const [subTitle, setSubTitle] = useState("");
+  const [showDateInput, setShowDateInput] = useState(false);
 
   const dragData: TodoDragData = {
     todoId: todo.id,
@@ -163,25 +164,38 @@ export function TodoItem({
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
-          <label
-            className={`flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs ${
-              isOverdue
-                ? "border-red-200 bg-red-50 text-red-600"
-                : todo.due_date
-                  ? "border-neutral-200 bg-neutral-50 text-neutral-600"
-                  : "border-transparent text-neutral-300 hover:border-neutral-200 hover:text-neutral-400"
-            }`}
-          >
-            <CalendarDays size={12} />
-            <input
-              type="date"
-              value={todo.due_date ?? ""}
-              onChange={(e) =>
-                updateTodo.mutate({ id: todo.id, listId: todo.list_id, due_date: e.target.value || null })
-              }
-              className="w-[6.5rem] bg-transparent outline-none"
-            />
-          </label>
+          {todo.due_date || showDateInput ? (
+            <label
+              className={`flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs ${
+                isOverdue
+                  ? "border-red-200 bg-red-50 text-red-600"
+                  : "border-neutral-200 bg-neutral-50 text-neutral-600"
+              }`}
+            >
+              <CalendarDays size={12} />
+              <input
+                type="date"
+                autoFocus={showDateInput && !todo.due_date}
+                value={todo.due_date ?? ""}
+                onChange={(e) =>
+                  updateTodo.mutate({ id: todo.id, listId: todo.list_id, due_date: e.target.value || null })
+                }
+                onBlur={() => {
+                  if (!todo.due_date) setShowDateInput(false);
+                }}
+                className="w-[6.5rem] bg-transparent outline-none"
+              />
+            </label>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowDateInput(true)}
+              className="shrink-0 rounded p-1 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500"
+              aria-label="設定截止日期"
+            >
+              <CalendarDays size={14} />
+            </button>
+          )}
 
           {!isChild && (
             <button
