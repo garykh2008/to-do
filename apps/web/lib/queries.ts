@@ -48,6 +48,7 @@ export function useAddList() {
       return data as List;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.lists }),
+    onError: (error) => console.error("[useAddList] 新增清單失敗：", error),
   });
 }
 
@@ -60,6 +61,7 @@ export function useRenameList() {
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.lists }),
+    onError: (error) => console.error("[useRenameList] 重新命名清單失敗：", error),
   });
 }
 
@@ -72,6 +74,7 @@ export function useDeleteList() {
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.lists }),
+    onError: (error) => console.error("[useDeleteList] 刪除清單失敗：", error),
   });
 }
 
@@ -146,6 +149,7 @@ export function useAddTodo() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.todosByList(variables.listId) });
     },
+    onError: (error) => console.error("[useAddTodo] 新增待辦事項失敗：", error),
   });
 }
 
@@ -171,6 +175,7 @@ export function useUpdateTodo() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.todosByList(variables.listId) });
     },
+    onError: (error) => console.error("[useUpdateTodo] 更新待辦事項失敗：", error),
   });
 }
 
@@ -185,6 +190,7 @@ export function useDeleteTodo() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.todosByList(variables.listId) });
     },
+    onError: (error) => console.error("[useDeleteTodo] 刪除待辦事項失敗：", error),
   });
 }
 
@@ -301,6 +307,11 @@ export function useReorderTodo() {
       if (variables.targetListId !== variables.sourceListId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.todosByList(variables.targetListId) });
       }
+    },
+    onError: (error, variables) => {
+      // react-query 預設不會把 mutate() 的錯誤丟出來或印出來，拖曳失敗時使用者/開發者
+      // 完全看不到發生什麼事，只會覺得「拖了沒反應」。先印到 console 方便除錯。
+      console.error("[useReorderTodo] 拖曳排序/巢狀化失敗：", error, variables);
     },
   });
 }
