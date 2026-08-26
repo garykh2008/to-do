@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useDroppable } from "@dnd-kit/core";
-import { CalendarDays, Inbox, ListChecks, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, HelpCircle, Inbox, ListChecks, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
 import type { List } from "@to-do/shared";
 import { useAddList, useDeleteList, useLists, useRenameList } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
+import { HelpModal } from "./HelpModal";
 
 function ListRow({
   list,
@@ -108,14 +109,25 @@ export function ListSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const router = useRouter();
   const supabase = createClient();
   const [newListName, setNewListName] = useState("");
+  const [helpOpen, setHelpOpen] = useState(false);
 
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col gap-1 border-r border-neutral-200 bg-white p-3 shadow-lg md:shadow-none">
       <div className="mb-2 flex items-center gap-2 px-2 py-1">
         {/* eslint-disable-next-line @next/next/no-img-element -- 固定小尺寸的 App icon，不需要 next/image 的最佳化 */}
         <img src="/icon.png" alt="" className="h-7 w-7 rounded-lg" />
-        <span className="text-sm font-semibold text-neutral-800">TODO</span>
+        <span className="flex-1 text-sm font-semibold text-neutral-800">TODO</span>
+        <button
+          type="button"
+          onClick={() => setHelpOpen(true)}
+          className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+          aria-label="使用說明"
+        >
+          <HelpCircle size={16} />
+        </button>
       </div>
+
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
 
       <Link
         href="/"

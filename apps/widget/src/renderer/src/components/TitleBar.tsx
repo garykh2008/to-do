@@ -1,7 +1,7 @@
-import { Minus, X } from "lucide-react";
+import { HelpCircle, Minus, X } from "lucide-react";
 import appIcon from "../assets/app-icon.png";
 
-export function TitleBar() {
+export function TitleBar({ onHelp }: { onHelp: () => void }) {
   return (
     <div className="titlebar-drag flex h-9 shrink-0 items-center justify-between bg-white pl-3 pr-1.5">
       <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-500">
@@ -9,6 +9,14 @@ export function TitleBar() {
         TODO 小工具
       </div>
       <div className="titlebar-no-drag flex items-center gap-0.5">
+        <button
+          type="button"
+          onClick={onHelp}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+          aria-label="使用說明"
+        >
+          <HelpCircle size={14} />
+        </button>
         <button
           type="button"
           onClick={() => window.windowControls.minimize()}

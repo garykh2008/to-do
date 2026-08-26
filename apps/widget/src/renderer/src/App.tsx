@@ -17,6 +17,7 @@ import { LoginForm } from "./components/LoginForm";
 import { QuickAddBar } from "./components/QuickAddBar";
 import { CompactList, type TodoDragData } from "./components/CompactList";
 import { ListChips } from "./components/ListChips";
+import { HelpModal } from "./components/HelpModal";
 
 interface ResolvedDragTarget {
   overTodoId: string;
@@ -45,6 +46,7 @@ export default function App() {
     deleteList,
   } = useTodoData();
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [dragOverState, setDragOverState] = useState<{ todoId: string; zone: DropZone } | null>(null);
   // 用 ref 記住 onDragMove 最後一次算出來的目標：onDragEnd 一律直接用這個，絕對不會重新量測，
   // 保證使用者看到的插入線／巢狀化提示，跟放開後實際發生的動作百分之百一致。
@@ -126,8 +128,9 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-neutral-200">
-      <TitleBar />
+    <div className="relative flex h-full flex-col overflow-hidden rounded-lg border border-neutral-200">
+      <TitleBar onHelp={() => setHelpOpen(true)} />
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
 
       {authLoading ? (
         <div className="flex flex-1 items-center justify-center text-sm text-neutral-400">載入中…</div>
