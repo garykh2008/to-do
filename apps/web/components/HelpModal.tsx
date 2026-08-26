@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 const SECTIONS = [
@@ -39,7 +40,10 @@ export function HelpModal({ onClose }: { onClose: () => void }) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  return (
+  // 側邊欄的手機版抽屜用 translate-x-* 做開合動畫；祖先元素上只要有非 none 的 transform
+  // （即使是 translate(0)），就會變成後代 fixed 定位元素的 containing block，讓這個 modal
+  // 的 fixed inset-0 被侷限在側邊欄的版面裡而不是整個視窗。用 portal 直接掛到 body 上避開這個問題。
+  return createPortal(
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- 點背景關閉是標準 modal 行為，內層卡片已擋掉冒泡
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
       <div
@@ -66,6 +70,7 @@ export function HelpModal({ onClose }: { onClose: () => void }) {
           ))}
         </dl>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
