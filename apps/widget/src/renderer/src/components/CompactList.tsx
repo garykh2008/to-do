@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { CalendarDays, CircleCheck, CornerDownRight, GripVertical, Plus } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronRight, CircleCheck, CornerDownRight, GripVertical, Plus } from "lucide-react";
 import { groupTodosByParent, type DropZone, type List, type Todo } from "@to-do/shared";
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -18,6 +18,8 @@ function TodoRow({
   listName,
   lists,
   hasChildren,
+  expanded,
+  onToggleExpand,
   dragZone,
   onToggle,
   onMove,
@@ -31,6 +33,8 @@ function TodoRow({
   listName: string;
   lists: List[];
   hasChildren: boolean;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
   dragZone: DropZone | null;
   onToggle: (id: string, completed: boolean) => void;
   onMove: (todoId: string, targetListId: string) => void;
@@ -118,6 +122,16 @@ function TodoRow({
           </span>
         )}
 
+        {!isChild && hasChildren && (
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            className="shrink-0 text-neutral-400 hover:text-neutral-600"
+            aria-label={expanded ? "收合子項目" : "展開子項目"}
+          >
+            {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+          </button>
+        )}
         <span
           {...attributes}
           {...listeners}
@@ -299,13 +313,27 @@ export function CompactList({
   const incompleteTop = topLevel.filter((t) => !t.is_completed);
   const completedTop = topLevel.filter((t) => t.is_completed);
   const [addingSubId, setAddingSubId] = useState<string | null>(null);
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
   function zoneFor(todoId: string): DropZone | null {
     return dragOverState?.todoId === todoId ? dragOverState.zone : null;
   }
 
+  function toggleExpand(todoId: string) {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(todoId)) {
+        next.delete(todoId);
+      } else {
+        next.add(todoId);
+      }
+      return next;
+    });
+  }
+
   function renderItem(todo: Todo) {
     const children = childrenByParentId.get(todo.id) ?? [];
+    const expanded = !collapsedIds.has(todo.id);
     return (
       <div key={todo.id} className="flex flex-col gap-1">
         <TodoRow
@@ -313,6 +341,8 @@ export function CompactList({
           listName={listNameById.get(todo.list_id) ?? ""}
           lists={lists}
           hasChildren={children.length > 0}
+          expanded={expanded}
+          onToggleExpand={() => toggleExpand(todo.id)}
           dragZone={zoneFor(todo.id)}
           onToggle={onToggle}
           onMove={onMove}
@@ -330,7 +360,7 @@ export function CompactList({
             onCancel={() => setAddingSubId(null)}
           />
         )}
-        {children.length > 0 && (
+        {children.length > 0 && expanded && (
           <div className="ml-4 flex flex-col gap-1 border-l border-neutral-200 pl-2">
             {children.map((child) => (
               <TodoRow
