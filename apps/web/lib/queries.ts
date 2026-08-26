@@ -15,6 +15,7 @@ import { createClient } from "./supabase/client";
 export const queryKeys = {
   lists: ["lists"] as const,
   todosByList: (listId: string) => ["todos", "list", listId] as const,
+  allTodos: ["todos", "all"] as const,
   todosInRange: (start: string, end: string) => ["todos", "range", start, end] as const,
 };
 
@@ -94,6 +95,19 @@ export function useTodos(listId: string | undefined) {
       return data as Todo[];
     },
     enabled: !!listId,
+  });
+}
+
+/** 「所有清單」頁用：一次抓這個使用者名下所有清單的待辦事項，畫面上再依 list_id 分組顯示 */
+export function useAllTodos() {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.allTodos,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("todos").select("*").order("position", { ascending: true });
+      if (error) throw error;
+      return data as Todo[];
+    },
   });
 }
 

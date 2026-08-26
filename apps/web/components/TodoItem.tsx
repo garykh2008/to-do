@@ -113,7 +113,7 @@ export function TodoItem({
           type="button"
           {...attributes}
           {...listeners}
-          className="cursor-grab text-neutral-300 hover:text-neutral-500 active:cursor-grabbing md:opacity-0 md:group-hover:opacity-100"
+          className="cursor-grab text-neutral-300 hover:text-neutral-500 active:cursor-grabbing"
           aria-label="拖曳排序／拖到其他項目上可變成子項目"
         >
           <GripVertical size={15} />
@@ -184,7 +184,7 @@ export function TodoItem({
           <button
             type="button"
             onClick={() => setAddingSub((v) => !v)}
-            className="shrink-0 rounded p-1 text-neutral-300 hover:bg-accent-50 hover:text-accent-600 md:opacity-0 md:group-hover:opacity-100"
+            className="shrink-0 rounded p-1 text-neutral-300 hover:bg-accent-50 hover:text-accent-600"
             aria-label="新增子項目"
           >
             <Plus size={14} />
@@ -194,7 +194,7 @@ export function TodoItem({
         <button
           type="button"
           onClick={() => deleteTodo.mutate({ id: todo.id, listId: todo.list_id })}
-          className="shrink-0 rounded p-1 text-neutral-300 hover:bg-red-50 hover:text-red-600 md:opacity-0 md:group-hover:opacity-100"
+          className="shrink-0 rounded p-1 text-neutral-300 hover:bg-red-50 hover:text-red-600"
           aria-label="刪除"
         >
           <Trash2 size={14} />
