@@ -10,6 +10,12 @@ import { useDragOverState } from "@/lib/dragOverContext";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
+// 直接切字串取月/日，不用 Date 物件轉換，避免時區造成日期跑掉
+function formatShortDate(iso: string): string {
+  const [, month, day] = iso.split("-");
+  return `${Number(month)}/${Number(day)}`;
+}
+
 export interface TodoDragData {
   todoId: string;
   listId: string;
@@ -34,7 +40,7 @@ export function TodoItem({
   const [expanded, setExpanded] = useState(true);
   const [addingSub, setAddingSub] = useState(false);
   const [subTitle, setSubTitle] = useState("");
-  const [showDateInput, setShowDateInput] = useState(false);
+  const [dateEditing, setDateEditing] = useState(false);
 
   const dragData: TodoDragData = {
     todoId: todo.id,
@@ -164,7 +170,7 @@ export function TodoItem({
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
-          {todo.due_date || showDateInput ? (
+          {dateEditing ? (
             <label
               className={`flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs ${
                 isOverdue
@@ -175,21 +181,34 @@ export function TodoItem({
               <CalendarDays size={12} />
               <input
                 type="date"
-                autoFocus={showDateInput && !todo.due_date}
+                autoFocus
                 value={todo.due_date ?? ""}
                 onChange={(e) =>
                   updateTodo.mutate({ id: todo.id, listId: todo.list_id, due_date: e.target.value || null })
                 }
-                onBlur={() => {
-                  if (!todo.due_date) setShowDateInput(false);
-                }}
+                onBlur={() => setDateEditing(false)}
                 className="w-[6.5rem] bg-transparent outline-none"
               />
             </label>
+          ) : todo.due_date ? (
+            // 已經有日期時只顯示精簡的「月/日」文字，點了才展開成完整的日期輸入框，
+            // 避免每一列都固定佔用一整個 <input type="date"> 的寬度，手機上標題會被擠掉。
+            <button
+              type="button"
+              onClick={() => setDateEditing(true)}
+              className={`flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs ${
+                isOverdue
+                  ? "border-red-200 bg-red-50 text-red-600"
+                  : "border-neutral-200 bg-neutral-50 text-neutral-600"
+              }`}
+            >
+              <CalendarDays size={11} />
+              {formatShortDate(todo.due_date)}
+            </button>
           ) : (
             <button
               type="button"
-              onClick={() => setShowDateInput(true)}
+              onClick={() => setDateEditing(true)}
               className="shrink-0 rounded p-1 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500"
               aria-label="設定截止日期"
             >
