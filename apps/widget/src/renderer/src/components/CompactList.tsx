@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import { CalendarDays, ChevronDown, ChevronRight, CircleCheck, CornerDownRight, GripVertical, Plus } from "lucide-react";
 import { groupTodosByParent, type DropZone, type List, type Todo } from "@to-do/shared";
 
@@ -50,7 +49,7 @@ function TodoRow({
     parentId: todo.parent_id,
     hasChildren,
   };
-  const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
     id: `todo:${todo.id}`,
     data: dragData,
   });
@@ -77,9 +76,12 @@ function TodoRow({
     menuRef.current.style.top = `${clampedTop}px`;
   }, [menuPos]);
 
+  // 拖曳中的視覺跟隨改由 DragOverlay 負責（見 App.tsx），這裡不要對原地的項目套用
+  // transform：這個項目還留在 overflow-y-auto 的清單容器裡，瀏覽器算可捲動範圍時
+  // 會把 transform 移動後的視覺位置也算進去，容器就會一直往拖曳方向「長」出新的可捲動空間，
+  // 看起來像清單被無限往下/往右撐開。原地項目只淡出當提示，實際跟著游標的是另一份浮動預覽。
   const style = {
-    transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.3 : 1,
   };
 
   const isOverdue = !!todo.due_date && !todo.is_completed && todo.due_date < TODAY;
@@ -257,6 +259,17 @@ function TodoRow({
   );
 }
 
+// DragOverlay 用的浮動預覽：只負責視覺跟隨游標，不需要任何互動或狀態。
+export function TodoDragPreview({ todo }: { todo: Todo }) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-md border border-accent-300 bg-white px-2 py-1.5 text-xs shadow-popover">
+      <GripVertical size={13} className="shrink-0 text-neutral-300" />
+      <input type="checkbox" checked={todo.is_completed} readOnly className="h-3.5 w-3.5 shrink-0 rounded" />
+      <p className="min-w-0 flex-1 truncate">{todo.title}</p>
+    </div>
+  );
+}
+
 function AddSubForm({ onAdd, onCancel }: { onAdd: (title: string) => void; onCancel: () => void }) {
   const [title, setTitle] = useState("");
 
@@ -309,7 +322,15 @@ export function CompactList({
   onUpdateTitle: (todoId: string, title: string) => void;
 }) {
   const listNameById = new Map(lists.map((l) => [l.id, l.name]));
-  const { topLevel, childrenByParentId } = groupTodosByParent(todos);
+
+  // 「全部」檢視會把所有清單的項目混在一起，原始 todos 是全域依 position 排序，
+  // 不同清單的項目會因此交錯出現。改成先依清單分組（穩定排序，同清單內仍保留原本的
+  // position 順序），畫面上才會一個清單一個清單分開顯示，不會混雜。
+  const listOrder = new Map(lists.map((l, index) => [l.id, index]));
+  const sortedTodos = [...todos].sort(
+    (a, b) => (listOrder.get(a.list_id) ?? 0) - (listOrder.get(b.list_id) ?? 0),
+  );
+  const { topLevel, childrenByParentId } = groupTodosByParent(sortedTodos);
   const incompleteTop = topLevel.filter((t) => !t.is_completed);
   const completedTop = topLevel.filter((t) => t.is_completed);
   const [addingSubId, setAddingSubId] = useState<string | null>(null);
