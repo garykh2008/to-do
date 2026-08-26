@@ -7,7 +7,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-  type DragOverEvent,
+  type DragMoveEvent,
 } from "@dnd-kit/core";
 import { Menu } from "lucide-react";
 import { useReorderTodo } from "@/lib/queries";
@@ -36,7 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
-  function resolveTodoOverZone(event: DragOverEvent): ResolvedDragTarget | null {
+  function resolveTodoOverZone(event: DragMoveEvent): ResolvedDragTarget | null {
     const { active, over } = event;
     if (!over) return null;
     const overId = String(over.id);
@@ -54,7 +54,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return { overTodoId, listId: overData.listId, parentId: overData.parentId, zone, canNest };
   }
 
-  function handleDragOver(event: DragOverEvent) {
+  // onDragOver 只有在「碰撞到的目標換人」時才會觸發，滑鼠在同一個目標裡繼續移動
+  // （例如從它下緣移到上緣）並不會讓插入線重新計算，畫面就會卡在第一次算出來的位置。
+  // onDragMove 則是滑鼠每移動一次就觸發，搭配當下最新的碰撞結果重新算一次，才會即時跟著滑鼠位置更新。
+  function handleDragMove(event: DragMoveEvent) {
     const resolved = resolveTodoOverZone(event);
     dragTargetRef.current = resolved;
     setDragOverState(resolved ? { todoId: resolved.overTodoId, zone: resolved.zone } : null);
@@ -119,7 +122,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <DndContext
       sensors={sensors}
-      onDragOver={handleDragOver}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
       onDragCancel={() => {
         dragTargetRef.current = null;
