@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { DropZone } from "./dndZones";
+import type { DropZone } from "@to-do/shared";
 
 export interface DragOverState {
   todoId: string;

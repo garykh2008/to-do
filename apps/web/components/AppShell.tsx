@@ -10,9 +10,9 @@ import {
   type DragMoveEvent,
 } from "@dnd-kit/core";
 import { Menu } from "lucide-react";
+import { resolveDropZone, type DropZone } from "@to-do/shared";
 import { useReorderTodo } from "@/lib/queries";
 import { useRealtimeSync } from "@/lib/useRealtimeSync";
-import { resolveDropZone, type DropZone } from "@/lib/dndZones";
 import { DragOverContext, type DragOverState } from "@/lib/dragOverContext";
 import { ListSidebar } from "./ListSidebar";
 import type { TodoDragData } from "./TodoItem";
