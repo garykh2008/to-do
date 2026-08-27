@@ -160,6 +160,7 @@ function AddListChip({ onAdd }: { onAdd: (name: string) => void }) {
           setAdding(false);
         }}
         onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
           if (e.key === "Escape") {
             setName("");
             setAdding(false);
