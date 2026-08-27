@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { getSupabase } from "../lib/supabaseClient";
 import appIcon from "../assets/app-icon.png";
 
 export function LoginForm() {
@@ -12,7 +12,7 @@ export function LoginForm() {
     event.preventDefault();
     setLoading(true);
     setError(null);
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: signInError } = await getSupabase().auth.signInWithPassword({ email, password });
     setLoading(false);
     if (signInError) setError(signInError.message);
   }

@@ -12,8 +12,9 @@ import {
 } from "@dnd-kit/core";
 import { resolveDropZone, type DropZone, type Todo } from "@to-do/shared";
 import { useAuth } from "./hooks/useAuth";
+import { useLocalAuth } from "./hooks/useLocalAuth";
 import { useTodoData } from "./hooks/useTodoData";
-import { supabase } from "./lib/supabaseClient";
+import { getSupabase } from "./lib/supabaseClient";
 import { TitleBar } from "./components/TitleBar";
 import { LoginForm } from "./components/LoginForm";
 import { QuickAddBar } from "./components/QuickAddBar";
@@ -35,8 +36,14 @@ interface ResolvedDragTarget {
 // 結果就是捲動量算飛掉、畫面看起來像無限往下/往右展開。搬到元件外面保持參照穩定。
 const AUTO_SCROLL_OPTIONS = { threshold: { x: 0.3, y: 0.15 } };
 
+// 跟 useTodoData 同一套道理：VITE_DATA_MODE 是 build 時就決定的常數，
+// 在模組載入時選好要用哪個 auth hook 不會違反 React hooks 規則。
+// 本機模式沒有登入流程，也不需要、不該去建立 Supabase client。
+const IS_LOCAL_MODE = import.meta.env.VITE_DATA_MODE === "local";
+const useAppAuth = IS_LOCAL_MODE ? useLocalAuth : useAuth;
+
 export default function App() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAppAuth();
   const {
     lists,
     todos,
@@ -150,7 +157,10 @@ export default function App() {
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden rounded-lg border border-neutral-200">
-      <TitleBar onHelp={() => setHelpOpen(true)} onLogout={() => supabase.auth.signOut()} />
+      <TitleBar
+        onHelp={() => setHelpOpen(true)}
+        onLogout={IS_LOCAL_MODE ? undefined : () => getSupabase().auth.signOut()}
+      />
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
 
       {authLoading ? (

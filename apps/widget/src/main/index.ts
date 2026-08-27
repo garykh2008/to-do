@@ -3,6 +3,14 @@ import { join } from "node:path";
 import { createTray } from "./tray";
 import { resourcePath } from "./resourcePath";
 import { secureGetItem, secureRemoveItem, secureSetItem } from "./secureStore";
+import { loadLocalStore, saveLocalStore, type LocalStoreData } from "./localStore";
+
+// 預設的 userData 路徑是依 app name 算的，兩個 build 變體不設定的話會共用同一個
+// package.json name（"widget"），本機模式的 todo-data.json 跟線上模式的 session token
+// 就會存進同一個資料夾。要在第一次呼叫 app.getPath('userData') 之前設好，這裡是最早的時機。
+if (import.meta.env.VITE_DATA_MODE === "local") {
+  app.setName("todo-widget-local");
+}
 
 let mainWindow: BrowserWindow | null = null;
 let isQuitting = false;
@@ -49,6 +57,9 @@ app.whenReady().then(() => {
 
   ipcMain.on("window:minimize", () => mainWindow?.minimize());
   ipcMain.on("window:close", () => mainWindow?.close());
+
+  ipcMain.handle("local-store:load", () => loadLocalStore());
+  ipcMain.handle("local-store:save", (_event, data: LocalStoreData) => saveLocalStore(data));
 
   createWindow();
   if (mainWindow) createTray(mainWindow);

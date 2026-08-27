@@ -1,8 +1,4 @@
-/// <reference types="vite/client" />
-
 interface ImportMetaEnv {
-  readonly VITE_SUPABASE_URL: string;
-  readonly VITE_SUPABASE_ANON_KEY: string;
   /** 不設定＝線上模式（Supabase + 登入）；"local" ＝本機模式（資料存本機檔案，免登入） */
   readonly VITE_DATA_MODE?: "local";
 }

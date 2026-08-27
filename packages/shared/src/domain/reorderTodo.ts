@@ -12,11 +12,26 @@ export interface ReorderTodoParams {
 }
 
 /**
- * 拖曳排序/跨清單移動/巢狀化共用的核心邏輯，網頁版跟小工具都呼叫這個函式。
- * beforeId/afterId 一律從這裡重新查詢 Supabase 的最新順序反推，不依賴呼叫端快取算 ——
+ * reorderTodoCore 需要的最小資料存取介面。Supabase（網頁版/小工具線上模式）跟本機檔案
+ * （小工具本機模式）各自實作一份，排序演算法本身（見 reorderTodoCore）完全共用，
+ * 不用為了兩種儲存方式各寫一份巢狀化/位置計算邏輯。
+ */
+export interface TodoPositionSource {
+  /** 找不到該筆 todo 時要 throw，跟原本 Supabase `.single()` 找不到列會回傳 error 的行為一致 */
+  getParentId(todoId: string): Promise<string | null>;
+  countChildren(parentId: string): Promise<number>;
+  /** 依 position 由小到大排序 */
+  getSiblings(listId: string, parentId: string | null): Promise<{ id: string; position: number }[]>;
+  setPosition(todoId: string, position: number): Promise<void>;
+  moveTodo(todoId: string, changes: { listId: string; parentId: string | null; position: number }): Promise<void>;
+}
+
+/**
+ * 拖曳排序/跨清單移動/巢狀化共用的核心邏輯，網頁版跟小工具（不管線上還是本機模式）都呼叫這個函式。
+ * beforeId/afterId 一律從這裡重新查詢最新順序反推，不依賴呼叫端快取算 ——
  * 呼叫端快取可能還沒吃到上一次操作的結果，用它算鄰居會找不到、直接整個排序動作沒反應。
  */
-export async function reorderTodo(supabase: TodoSupabaseClient, params: ReorderTodoParams): Promise<void> {
+export async function reorderTodoCore(source: TodoPositionSource, params: ReorderTodoParams): Promise<void> {
   const { id, targetListId, targetParentId, anchorTodoId, anchorPosition } = params;
 
   // 巢狀化之前用最新資料重新驗證一次，避免拖曳快取還沒更新完就連續操作，
@@ -26,38 +41,20 @@ export async function reorderTodo(supabase: TodoSupabaseClient, params: ReorderT
     if (targetParentId === id) {
       throw new Error("不能把項目拖到自己身上");
     }
-    const { data: targetRow, error: targetError } = await supabase
-      .from("todos")
-      .select("parent_id")
-      .eq("id", targetParentId)
-      .single();
-    if (targetError) throw targetError;
-    if (targetRow.parent_id !== null) {
+    const targetParentParentId = await source.getParentId(targetParentId);
+    if (targetParentParentId !== null) {
       throw new Error("目標項目已經是子項目，不能再巢狀化");
     }
-    const { count, error: childError } = await supabase
-      .from("todos")
-      .select("id", { count: "exact", head: true })
-      .eq("parent_id", id);
-    if (childError) throw childError;
-    if ((count ?? 0) > 0) {
+    const childCount = await source.countChildren(id);
+    if (childCount > 0) {
       throw new Error("這個項目已經有子項目，不能再變成別人的子項目");
     }
   }
 
-  let siblingsQuery = supabase
-    .from("todos")
-    .select("id, position")
-    .eq("list_id", targetListId)
-    .order("position", { ascending: true });
-  siblingsQuery =
-    targetParentId === null ? siblingsQuery.is("parent_id", null) : siblingsQuery.eq("parent_id", targetParentId);
-  const { data: siblings, error: fetchError } = await siblingsQuery;
-  if (fetchError) throw fetchError;
+  const siblings = await source.getSiblings(targetListId, targetParentId);
+  const others = siblings.filter((t) => t.id !== id);
 
-  const others = (siblings ?? []).filter((t) => t.id !== id);
-
-  // 用「剛從資料庫查回來的」順序反推 beforeId/afterId，而不是相信呼叫端傳進來的猜測
+  // 用「剛查回來的」順序反推 beforeId/afterId，而不是相信呼叫端傳進來的猜測
   let beforeId: string | null = null;
   let afterId: string | null = null;
   if (anchorTodoId) {
@@ -85,8 +82,7 @@ export async function reorderTodo(supabase: TodoSupabaseClient, params: ReorderT
     if (needsRenumber) {
       const renumbered = renumberPositions(others);
       for (const { item, position: pos } of renumbered) {
-        const { error } = await supabase.from("todos").update({ position: pos }).eq("id", item.id);
-        if (error) throw error;
+        await source.setPosition(item.id, pos);
       }
       const newBefore = beforeId ? (renumbered.find((r) => r.item.id === beforeId)?.position ?? null) : null;
       const newAfter = afterId ? (renumbered.find((r) => r.item.id === afterId)?.position ?? null) : null;
@@ -96,9 +92,50 @@ export async function reorderTodo(supabase: TodoSupabaseClient, params: ReorderT
     }
   }
 
-  const { error } = await supabase
-    .from("todos")
-    .update({ list_id: targetListId, parent_id: targetParentId, position: targetPosition })
-    .eq("id", id);
-  if (error) throw error;
+  await source.moveTodo(id, { listId: targetListId, parentId: targetParentId, position: targetPosition });
+}
+
+export function createSupabaseTodoPositionSource(supabase: TodoSupabaseClient): TodoPositionSource {
+  return {
+    async getParentId(todoId) {
+      const { data, error } = await supabase.from("todos").select("parent_id").eq("id", todoId).single();
+      if (error) throw error;
+      return data.parent_id;
+    },
+    async countChildren(parentId) {
+      const { count, error } = await supabase
+        .from("todos")
+        .select("id", { count: "exact", head: true })
+        .eq("parent_id", parentId);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    async getSiblings(listId, parentId) {
+      let query = supabase
+        .from("todos")
+        .select("id, position")
+        .eq("list_id", listId)
+        .order("position", { ascending: true });
+      query = parentId === null ? query.is("parent_id", null) : query.eq("parent_id", parentId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data ?? [];
+    },
+    async setPosition(todoId, position) {
+      const { error } = await supabase.from("todos").update({ position }).eq("id", todoId);
+      if (error) throw error;
+    },
+    async moveTodo(todoId, changes) {
+      const { error } = await supabase
+        .from("todos")
+        .update({ list_id: changes.listId, parent_id: changes.parentId, position: changes.position })
+        .eq("id", todoId);
+      if (error) throw error;
+    },
+  };
+}
+
+/** 沿用既有呼叫端（網頁版、小工具線上模式）習慣的簡便入口，內部組出 Supabase 版的 source。 */
+export async function reorderTodo(supabase: TodoSupabaseClient, params: ReorderTodoParams): Promise<void> {
+  return reorderTodoCore(createSupabaseTodoPositionSource(supabase), params);
 }
