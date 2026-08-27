@@ -31,7 +31,6 @@ function createWindow(): void {
     height: 520,
     minWidth: 300,
     minHeight: 400,
-    alwaysOnTop: true,
     title: "TODO 小工具",
     icon: resourcePath("icon.png"),
     frame: false,
@@ -44,6 +43,15 @@ function createWindow(): void {
       backgroundThrottling: false,
     },
   });
+
+  // 建構子的 alwaysOnTop 選項在 Windows 上只等同一般的 topmost，另一個螢幕若有
+  // 全螢幕獨佔（DXGI exclusive fullscreen，例如遊戲/播放器）的視窗，會搶走 topmost
+  // 的 z-order，害小工具被壓到最底層（看起來像「消失」，其實是被蓋住了）。
+  // "screen-saver" 是 Electron 在 Windows 上會給到更高 z-order band 的層級，
+  // 且在每次拿到 focus 時（例如使用者點擊小工具）重新宣告一次，把 topmost 搶回來。
+  mainWindow.setAlwaysOnTop(true, "screen-saver");
+  mainWindow.on("focus", () => mainWindow?.setAlwaysOnTop(true, "screen-saver"));
+  mainWindow.on("show", () => mainWindow?.setAlwaysOnTop(true, "screen-saver"));
 
   mainWindow.on("close", (event) => {
     if (!isQuitting) {
