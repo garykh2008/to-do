@@ -26,6 +26,16 @@ jobs:
       - name: Build local-mode widget installer
         run: pnpm --filter widget run package:win:local
 
+      # electron-builder 用 productName（含中文）當檔名，GitHub release 附件上傳時會把
+      # 檔名裡的非 ASCII 字元整個拿掉，"TODO 小工具（本機版） Setup 1.0.0.exe" 會變成
+      # 語意不明的 "TODO.Setup.1.0.0.exe"。上傳前先重新命名成 ASCII-safe 的檔名。
+      - name: Rename installer to an ASCII-safe filename
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path apps/widget/release -Filter *.exe | Select-Object -First 1
+          $newName = "TODO-Widget-Local-Setup-$($env:GITHUB_REF_NAME).exe"
+          Rename-Item -Path $exe.FullName -NewName $newName
+
       # 手動觸發（workflow_dispatch）只把安裝檔存成 artifact 方便下載測試；
       # 真的 push tag（v1.0.0 這種）才會建立/更新 GitHub Release 並附上安裝檔。
       - uses: actions/upload-artifact@v4
