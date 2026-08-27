@@ -11,6 +11,7 @@ const config: Config = {
       fontFamily: {
         sans: [
           "'Inter Variable'",
+          "'Noto Sans TC Variable'",
           "'Microsoft JhengHei UI'",
           "'Microsoft JhengHei'",
           "'PingFang TC'",
