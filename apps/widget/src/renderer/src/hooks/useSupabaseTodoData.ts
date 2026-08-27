@@ -175,6 +175,14 @@ export function useSupabaseTodoData(): TodoDataApi {
     [reload],
   );
 
+  const updateNotes = useCallback(
+    async (todoId: string, notes: string | null) => {
+      await getSupabase().from("todos").update({ notes }).eq("id", todoId);
+      reload();
+    },
+    [reload],
+  );
+
   const updateTitle = useCallback(
     async (todoId: string, title: string) => {
       await getSupabase().from("todos").update({ title }).eq("id", todoId);
@@ -225,6 +233,7 @@ export function useSupabaseTodoData(): TodoDataApi {
     updatePriority,
     updateLabels,
     updateRecurrence,
+    updateNotes,
     updateTitle,
     addList,
     renameList,

@@ -9,6 +9,7 @@ const authStorage = {
 const windowControls = {
   minimize: (): void => ipcRenderer.send("window:minimize"),
   close: (): void => ipcRenderer.send("window:close"),
+  show: (): void => ipcRenderer.send("window:show"),
 };
 
 type LocalStoreData = { lists: unknown[]; todos: unknown[] };
@@ -39,6 +40,8 @@ const localStore = {
     ipcRenderer.invoke("local-store:update-labels", todoId, labels),
   updateRecurrence: (todoId: string, recurrenceRule: unknown): Promise<LocalStoreData> =>
     ipcRenderer.invoke("local-store:update-recurrence", todoId, recurrenceRule),
+  updateNotes: (todoId: string, notes: string | null): Promise<LocalStoreData> =>
+    ipcRenderer.invoke("local-store:update-notes", todoId, notes),
   updateTitle: (todoId: string, title: string): Promise<LocalStoreData> =>
     ipcRenderer.invoke("local-store:update-title", todoId, title),
   addList: (name: string): Promise<LocalStoreData> => ipcRenderer.invoke("local-store:add-list", name),

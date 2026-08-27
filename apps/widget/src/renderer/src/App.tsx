@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -10,7 +10,7 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { resolveDropZone, type DropZone, type Todo } from "@to-do/shared";
+import { buildReminderSummary, reminderMessage, resolveDropZone, splitByDueStatus, type DropZone, type Todo } from "@to-do/shared";
 import { useAuth } from "./hooks/useAuth";
 import { useLocalAuth } from "./hooks/useLocalAuth";
 import { useTodoData } from "./hooks/useTodoData";
@@ -36,6 +36,13 @@ interface ResolvedDragTarget {
 // 結果就是捲動量算飛掉、畫面看起來像無限往下/往右展開。搬到元件外面保持參照穩定。
 const AUTO_SCROLL_OPTIONS = { threshold: { x: 0.3, y: 0.15 } };
 
+const CHECK_INTERVAL_MS = 15 * 60 * 1000;
+const LAST_REMINDER_KEY = "todo:lastReminderDate";
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 // 跟 useTodoData 同一套道理：VITE_DATA_MODE 是 build 時就決定的常數，
 // 在模組載入時選好要用哪個 auth hook 不會違反 React hooks 規則。
 // 本機模式沒有登入流程，也不需要、不該去建立 Supabase client。
@@ -59,26 +66,60 @@ export default function App() {
     updatePriority,
     updateLabels,
     updateRecurrence,
+    updateNotes,
     updateTitle,
     addList,
     renameList,
     deleteList,
   } = useTodoData();
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [showTodayOnly, setShowTodayOnly] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [activeDragTodo, setActiveDragTodo] = useState<Todo | null>(null);
   const [dragOverState, setDragOverState] = useState<{ todoId: string; zone: DropZone } | null>(null);
+  // 小工具常駐背景可能開好幾天沒重開，不能只在 module 載入時算一次「今天」（那樣過了午夜
+  // 也不會變）；跟到期提醒共用同一個 15 分鐘的計時器，順便讓「今天」定期跟著刷新。
+  const [today, setToday] = useState(todayStr);
   // 用 ref 記住 onDragMove 最後一次算出來的目標：onDragEnd 一律直接用這個，絕對不會重新量測，
   // 保證使用者看到的插入線／巢狀化提示，跟放開後實際發生的動作百分之百一致。
   const dragTargetRef = useRef<ResolvedDragTarget | null>(null);
 
-  const visibleTodos = selectedListId ? todos.filter((t) => t.list_id === selectedListId) : todos;
+  // 「今天」chip：逾期 + 今天到期（未完成的）攤平成一個清單，widget 空間有限不像網頁版
+  // 分「逾期」「今天」兩個獨立區塊。
+  const { overdue, dueToday } = splitByDueStatus(todos, today);
+  const todayTodos = [...overdue, ...dueToday.filter((t) => !t.is_completed)];
+  const visibleTodos = selectedListId
+    ? todos.filter((t) => t.list_id === selectedListId)
+    : showTodayOnly
+      ? todayTodos
+      : todos;
   // 標籤自動完成用：不管目前選哪個清單，都從全部 todos 找出用過的標籤，
   // 這樣切換清單也看得到別的清單用過的標籤，跟 Todoist 的標籤是跨清單共用的概念一致。
   const knownLabels = [...new Set(todos.flatMap((t) => t.labels))].sort();
   // 「全部」或選到 Inbox 本身時都落到 Inbox；選到別的清單就新增到那個清單，
   // 跟本機網頁版（AddTodoForm 直接帶目前頁面的 listId）行為一致。
   const addTargetList = selectedListId ? (lists.find((l) => l.id === selectedListId) ?? null) : inboxList;
+
+  // 到期提醒：預設開啟、沒有開關 UI（小工具本來就是常駐背景提醒用的定位，先簡化）。
+  // 跟「今天」的刷新共用同一個計時器；一天最多跳一次彙總通知，不是每個任務跳一則。
+  useEffect(() => {
+    function tick() {
+      const now = todayStr();
+      setToday(now);
+      if (loading) return;
+      if (localStorage.getItem(LAST_REMINDER_KEY) === now) return;
+      const summary = buildReminderSummary(todos, now);
+      if (!summary) return;
+      localStorage.setItem(LAST_REMINDER_KEY, now);
+      if (typeof Notification === "undefined") return;
+      const notification = new Notification("待辦事項提醒", { body: reminderMessage(summary) });
+      notification.onclick = () => window.windowControls.show();
+    }
+
+    tick();
+    const timer = setInterval(tick, CHECK_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [loading, todos]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -217,6 +258,7 @@ export default function App() {
                 onUpdatePriority={updatePriority}
                 onUpdateLabels={updateLabels}
                 onUpdateRecurrence={updateRecurrence}
+                onUpdateNotes={updateNotes}
                 onUpdateTitle={updateTitle}
                 knownLabels={knownLabels}
               />
@@ -224,7 +266,15 @@ export default function App() {
             <ListChips
               lists={lists}
               selectedListId={selectedListId}
-              onSelectList={setSelectedListId}
+              todayOnly={showTodayOnly}
+              onSelectList={(listId) => {
+                setSelectedListId(listId);
+                setShowTodayOnly(false);
+              }}
+              onSelectToday={() => {
+                setSelectedListId(null);
+                setShowTodayOnly(true);
+              }}
               onAddList={addList}
               onRenameList={renameList}
               onDeleteList={(listId) => {

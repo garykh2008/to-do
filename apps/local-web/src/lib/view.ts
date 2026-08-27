@@ -1,1 +1,1 @@
-export type View = { type: "all" } | { type: "calendar" } | { type: "list"; listId: string };
+export type View = { type: "all" } | { type: "today" } | { type: "calendar" } | { type: "list"; listId: string };

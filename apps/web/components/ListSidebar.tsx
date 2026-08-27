@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useDroppable } from "@dnd-kit/core";
-import { CalendarDays, HelpCircle, Inbox, ListChecks, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
+import { Bell, BellOff, CalendarDays, HelpCircle, Inbox, ListChecks, LogOut, Pencil, Plus, Sun, Trash2 } from "lucide-react";
 import type { List } from "@to-do/shared";
 import { useAddList, useDeleteList, useLists, useRenameList } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
+import { useDueDateReminders } from "@/lib/useDueDateReminders";
 import { HelpModal } from "./HelpModal";
 
 function ListRow({
@@ -110,6 +111,7 @@ export function ListSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const supabase = createClient();
   const [newListName, setNewListName] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
+  const { enabled: remindersEnabled, toggle: toggleReminders } = useDueDateReminders();
 
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col gap-1 border-r border-neutral-200 bg-white p-3 shadow-lg md:shadow-none">
@@ -117,6 +119,15 @@ export function ListSidebar({ onNavigate }: { onNavigate?: () => void }) {
         {/* eslint-disable-next-line @next/next/no-img-element -- 固定小尺寸的 App icon，不需要 next/image 的最佳化 */}
         <img src="/icon.png" alt="" className="h-7 w-7 rounded-lg" />
         <span className="flex-1 text-sm font-semibold text-neutral-800">TODO</span>
+        <button
+          type="button"
+          onClick={toggleReminders}
+          className={`rounded p-1 hover:bg-neutral-100 ${remindersEnabled ? "text-accent-600" : "text-neutral-400 hover:text-neutral-700"}`}
+          aria-label={remindersEnabled ? "關閉到期提醒" : "開啟到期提醒"}
+          title={remindersEnabled ? "已開啟到期提醒（分頁開著時）" : "開啟到期提醒（分頁開著時）"}
+        >
+          {remindersEnabled ? <Bell size={16} /> : <BellOff size={16} />}
+        </button>
         <button
           type="button"
           onClick={() => setHelpOpen(true)}
@@ -129,6 +140,16 @@ export function ListSidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
 
+      <Link
+        href="/today"
+        onClick={onNavigate}
+        className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
+          pathname === "/today" ? "bg-accent-50 text-accent-700" : "text-neutral-700 hover:bg-neutral-100"
+        }`}
+      >
+        <Sun size={15} />
+        今天
+      </Link>
       <Link
         href="/"
         onClick={onNavigate}

@@ -58,7 +58,7 @@ export function useAddTodo(): {
 export function useUpdateTodo(): {
   mutate: (
     input: { id: string; listId: string } & Partial<
-      Pick<Todo, "title" | "due_date" | "priority" | "labels" | "recurrence_rule" | "is_completed">
+      Pick<Todo, "title" | "notes" | "due_date" | "priority" | "labels" | "recurrence_rule" | "is_completed">
     >,
   ) => void;
 } {
@@ -75,6 +75,8 @@ export function useUpdateTodo(): {
         mutate("updateLabels", [input.id, input.labels]);
       } else if (input.recurrence_rule !== undefined) {
         mutate("updateRecurrence", [input.id, input.recurrence_rule]);
+      } else if (input.notes !== undefined) {
+        mutate("updateNotes", [input.id, input.notes]);
       } else if (input.due_date !== undefined) {
         mutate("updateDueDate", [input.id, input.due_date]);
       }

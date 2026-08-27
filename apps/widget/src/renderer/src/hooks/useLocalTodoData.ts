@@ -82,6 +82,10 @@ export function useLocalTodoData(): TodoDataApi {
     applyState(await window.localStore.updateRecurrence(todoId, recurrenceRule));
   }, []);
 
+  const updateNotes = useCallback(async (todoId: string, notes: string | null) => {
+    applyState(await window.localStore.updateNotes(todoId, notes));
+  }, []);
+
   const updateTitle = useCallback(async (todoId: string, title: string) => {
     applyState(await window.localStore.updateTitle(todoId, title));
   }, []);
@@ -113,6 +117,7 @@ export function useLocalTodoData(): TodoDataApi {
     updatePriority,
     updateLabels,
     updateRecurrence,
+    updateNotes,
     updateTitle,
     addList,
     renameList,

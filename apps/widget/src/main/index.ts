@@ -75,6 +75,10 @@ app.whenReady().then(() => {
 
   ipcMain.on("window:minimize", () => mainWindow?.minimize());
   ipcMain.on("window:close", () => mainWindow?.close());
+  ipcMain.on("window:show", () => {
+    mainWindow?.show();
+    mainWindow?.focus();
+  });
 
   // 本機模式的所有資料操作都走這些 channel，實際的狀態跟業務邏輯全部在 localDataEngine 裡
   // （小工具視窗自己是這樣，本機瀏覽器頁面則是走 httpServer.ts 的 /api/rpc 打同一份 engine）。
@@ -106,6 +110,9 @@ app.whenReady().then(() => {
   );
   ipcMain.handle("local-store:update-recurrence", (_e, todoId: string, recurrenceRule: RecurrenceRule | null) =>
     localDataEngine.updateRecurrence(todoId, recurrenceRule),
+  );
+  ipcMain.handle("local-store:update-notes", (_e, todoId: string, notes: string | null) =>
+    localDataEngine.updateNotes(todoId, notes),
   );
   ipcMain.handle("local-store:update-title", (_e, todoId: string, title: string) =>
     localDataEngine.updateTitle(todoId, title),

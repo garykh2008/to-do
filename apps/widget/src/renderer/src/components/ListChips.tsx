@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { ChevronLeft, ChevronRight, Inbox, LayoutGrid, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Inbox, LayoutGrid, Plus, Sun } from "lucide-react";
 import type { List } from "@to-do/shared";
 
 function chipClass(isSelected: boolean, isOver: boolean) {
@@ -18,6 +18,19 @@ function AllChip({ isSelected, onSelect }: { isSelected: boolean; onSelect: () =
     >
       <LayoutGrid size={11} />
       全部
+    </button>
+  );
+}
+
+function TodayChip({ isSelected, onSelect }: { isSelected: boolean; onSelect: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors ${chipClass(isSelected, false)}`}
+    >
+      <Sun size={11} />
+      今天
     </button>
   );
 }
@@ -187,14 +200,18 @@ function AddListChip({ onAdd }: { onAdd: (name: string) => void }) {
 export function ListChips({
   lists,
   selectedListId,
+  todayOnly,
   onSelectList,
+  onSelectToday,
   onAddList,
   onRenameList,
   onDeleteList,
 }: {
   lists: List[];
   selectedListId: string | null;
+  todayOnly: boolean;
   onSelectList: (listId: string | null) => void;
+  onSelectToday: () => void;
   onAddList: (name: string) => void;
   onRenameList: (listId: string, name: string) => void;
   onDeleteList: (listId: string) => void;
@@ -237,7 +254,8 @@ export function ListChips({
         ref={scrollRef}
         className="flex gap-1.5 overflow-x-auto p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        <AllChip isSelected={selectedListId === null} onSelect={() => onSelectList(null)} />
+        <AllChip isSelected={selectedListId === null && !todayOnly} onSelect={() => onSelectList(null)} />
+        <TodayChip isSelected={todayOnly} onSelect={onSelectToday} />
         {lists.map((list) => (
           <Chip
             key={list.id}

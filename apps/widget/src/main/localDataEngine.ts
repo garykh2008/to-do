@@ -266,6 +266,13 @@ class LocalDataEngine {
     return this.getState();
   }
 
+  updateNotes(todoId: string, notes: string | null): LocalDataState {
+    this.ensureLoaded();
+    this.todos = this.todos.map((t) => (t.id === todoId ? { ...t, notes, updated_at: nowIso() } : t));
+    this.persist();
+    return this.getState();
+  }
+
   updateTitle(todoId: string, title: string): LocalDataState {
     this.ensureLoaded();
     this.todos = this.todos.map((t) => (t.id === todoId ? { ...t, title, updated_at: nowIso() } : t));
@@ -334,6 +341,8 @@ export async function dispatchLocalEngine(method: string, args: unknown[]): Prom
       return localDataEngine.updateLabels(args[0] as string, args[1] as string[]);
     case "updateRecurrence":
       return localDataEngine.updateRecurrence(args[0] as string, args[1] as RecurrenceRule | null);
+    case "updateNotes":
+      return localDataEngine.updateNotes(args[0] as string, args[1] as string | null);
     case "updateTitle":
       return localDataEngine.updateTitle(args[0] as string, args[1] as string);
     case "addList":

@@ -3,7 +3,19 @@
 import { useState, type FormEvent } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { CalendarDays, ChevronDown, ChevronRight, CornerDownRight, Flag, GripVertical, Plus, Repeat, Tag, Trash2 } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronRight,
+  CornerDownRight,
+  Flag,
+  GripVertical,
+  Plus,
+  Repeat,
+  StickyNote,
+  Tag,
+  Trash2,
+} from "lucide-react";
 import {
   cyclePriority,
   describeRecurrence,
@@ -54,6 +66,7 @@ export function TodoItem({
   const [dateEditing, setDateEditing] = useState(false);
   const [labelsEditing, setLabelsEditing] = useState(false);
   const [recurrenceEditing, setRecurrenceEditing] = useState(false);
+  const [notesEditing, setNotesEditing] = useState(false);
 
   const dragData: TodoDragData = {
     todoId: todo.id,
@@ -251,6 +264,15 @@ export function TodoItem({
             <Tag size={14} />
           </button>
 
+          <button
+            type="button"
+            onClick={() => setNotesEditing((v) => !v)}
+            className={`shrink-0 rounded p-1 hover:bg-neutral-100 ${todo.notes ? "text-accent-600" : "text-neutral-300"}`}
+            aria-label="設定備註"
+          >
+            <StickyNote size={14} />
+          </button>
+
           {recurrenceEditing ? (
             <select
               autoFocus
@@ -337,6 +359,36 @@ export function TodoItem({
                 {label}
               </button>
             ))
+          )}
+        </div>
+      )}
+
+      {(notesEditing || todo.notes) && (
+        <div className="ml-7">
+          {notesEditing ? (
+            <textarea
+              autoFocus
+              defaultValue={todo.notes ?? ""}
+              onBlur={(e) => {
+                const trimmed = e.currentTarget.value.trim();
+                updateTodo.mutate({ id: todo.id, listId: todo.list_id, notes: trimmed || null });
+                setNotesEditing(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setNotesEditing(false);
+              }}
+              placeholder="備註…"
+              rows={3}
+              className="w-full max-w-sm resize-y rounded-md border border-accent-300 px-2 py-1 text-xs outline-none"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setNotesEditing(true)}
+              className="w-full max-w-sm truncate rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-left text-xs whitespace-pre-line text-neutral-600 hover:border-neutral-300"
+            >
+              {todo.notes}
+            </button>
           )}
         </div>
       )}

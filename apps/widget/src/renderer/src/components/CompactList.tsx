@@ -1,6 +1,18 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { CalendarDays, ChevronDown, ChevronRight, CircleCheck, CornerDownRight, Flag, GripVertical, Plus, Repeat, Tag } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronRight,
+  CircleCheck,
+  CornerDownRight,
+  Flag,
+  GripVertical,
+  Plus,
+  Repeat,
+  StickyNote,
+  Tag,
+} from "lucide-react";
 import {
   cyclePriority,
   describeRecurrence,
@@ -42,6 +54,7 @@ function TodoRow({
   onUpdatePriority,
   onUpdateLabels,
   onUpdateRecurrence,
+  onUpdateNotes,
   onUpdateTitle,
   onToggleAddSub,
   isChild = false,
@@ -60,6 +73,7 @@ function TodoRow({
   onUpdatePriority: (todoId: string, priority: number) => void;
   onUpdateLabels: (todoId: string, labels: string[]) => void;
   onUpdateRecurrence: (todoId: string, recurrenceRule: RecurrenceRule | null) => void;
+  onUpdateNotes: (todoId: string, notes: string | null) => void;
   onUpdateTitle: (todoId: string, title: string) => void;
   onToggleAddSub?: () => void;
   isChild?: boolean;
@@ -84,6 +98,7 @@ function TodoRow({
   const [dateEditing, setDateEditing] = useState(false);
   const [labelsEditing, setLabelsEditing] = useState(false);
   const [recurrenceEditing, setRecurrenceEditing] = useState(false);
+  const [notesEditing, setNotesEditing] = useState(false);
   const [titleEditing, setTitleEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(todo.title);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -279,6 +294,15 @@ function TodoRow({
           <Flag size={12} fill={todo.priority === NO_PRIORITY ? "none" : "currentColor"} />
         </button>
 
+        <button
+          type="button"
+          onClick={() => setNotesEditing((v) => !v)}
+          className={`shrink-0 rounded p-1 hover:bg-neutral-100 ${todo.notes ? "text-accent-600" : "text-neutral-300"}`}
+          aria-label="設定備註"
+        >
+          <StickyNote size={12} />
+        </button>
+
         {recurrenceEditing ? (
           <select
             autoFocus
@@ -360,6 +384,36 @@ function TodoRow({
           </>
         )}
       </div>
+
+      {(notesEditing || todo.notes) && (
+        <div className={isChild ? "mt-1 ml-4" : "mt-1"}>
+          {notesEditing ? (
+            <textarea
+              autoFocus
+              defaultValue={todo.notes ?? ""}
+              onBlur={(e) => {
+                const trimmed = e.currentTarget.value.trim();
+                onUpdateNotes(todo.id, trimmed || null);
+                setNotesEditing(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setNotesEditing(false);
+              }}
+              placeholder="備註…"
+              rows={2}
+              className="w-full resize-y rounded border border-accent-300 px-1.5 py-1 text-[10px] outline-none"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setNotesEditing(true)}
+              className="w-full truncate rounded border border-neutral-200 bg-neutral-50 px-1.5 py-1 text-left text-[10px] whitespace-pre-line text-neutral-500 hover:border-neutral-300"
+            >
+              {todo.notes}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -417,6 +471,7 @@ export function CompactList({
   onUpdatePriority,
   onUpdateLabels,
   onUpdateRecurrence,
+  onUpdateNotes,
   onUpdateTitle,
   knownLabels,
 }: {
@@ -431,6 +486,7 @@ export function CompactList({
   onUpdatePriority: (todoId: string, priority: number) => void;
   onUpdateLabels: (todoId: string, labels: string[]) => void;
   onUpdateRecurrence: (todoId: string, recurrenceRule: RecurrenceRule | null) => void;
+  onUpdateNotes: (todoId: string, notes: string | null) => void;
   onUpdateTitle: (todoId: string, title: string) => void;
   knownLabels: string[];
 }) {
@@ -485,6 +541,7 @@ export function CompactList({
           onUpdatePriority={onUpdatePriority}
           onUpdateLabels={onUpdateLabels}
           onUpdateRecurrence={onUpdateRecurrence}
+          onUpdateNotes={onUpdateNotes}
           onUpdateTitle={onUpdateTitle}
           onToggleAddSub={() => setAddingSubId((id) => (id === todo.id ? null : todo.id))}
         />
@@ -514,6 +571,7 @@ export function CompactList({
                 onUpdatePriority={onUpdatePriority}
                 onUpdateLabels={onUpdateLabels}
                 onUpdateRecurrence={onUpdateRecurrence}
+                onUpdateNotes={onUpdateNotes}
                 onUpdateTitle={onUpdateTitle}
                 isChild
               />

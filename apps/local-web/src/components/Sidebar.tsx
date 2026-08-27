@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { CalendarDays, Inbox, ListChecks, Pencil, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, Inbox, ListChecks, Pencil, Plus, Sun, Trash2 } from "lucide-react";
 import type { List } from "@to-do/shared";
 import { useAddList, useDeleteList, useLists, useRenameList } from "@/lib/queries";
 import type { View } from "@/lib/view";
@@ -116,6 +116,18 @@ export function Sidebar({
         <span className="flex-1 text-sm font-semibold text-neutral-800">TODO</span>
       </div>
 
+      <button
+        type="button"
+        onClick={() => onNavigate({ type: "today" })}
+        className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors ${
+          viewsEqual(view, { type: "today" })
+            ? "bg-accent-50 text-accent-700"
+            : "text-neutral-700 hover:bg-neutral-100"
+        }`}
+      >
+        <Sun size={15} />
+        今天
+      </button>
       <button
         type="button"
         onClick={() => onNavigate({ type: "all" })}

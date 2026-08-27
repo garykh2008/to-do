@@ -16,6 +16,7 @@ import { DragOverContext, type DragOverState } from "./lib/dragOverContext";
 import type { View } from "./lib/view";
 import { Sidebar } from "./components/Sidebar";
 import { AllListsView } from "./components/AllListsView";
+import { TodayView } from "./components/TodayView";
 import { TodoListView } from "./components/TodoListView";
 import { CalendarGrid } from "./components/CalendarGrid";
 import type { TodoDragData } from "./components/TodoItem";
@@ -171,6 +172,7 @@ function Shell() {
             </header>
             <main className="min-w-0 flex-1">
               {view.type === "all" && <AllListsView />}
+              {view.type === "today" && <TodayView />}
               {view.type === "calendar" && <CalendarGrid />}
               {view.type === "list" && activeList && (
                 <TodoListView listId={activeList.id} listName={activeList.name} />

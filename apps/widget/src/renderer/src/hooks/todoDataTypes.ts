@@ -33,6 +33,7 @@ export interface TodoDataApi {
   updatePriority: (todoId: string, priority: number) => Promise<void>;
   updateLabels: (todoId: string, labels: string[]) => Promise<void>;
   updateRecurrence: (todoId: string, recurrenceRule: RecurrenceRule | null) => Promise<void>;
+  updateNotes: (todoId: string, notes: string | null) => Promise<void>;
   updateTitle: (todoId: string, title: string) => Promise<void>;
   addList: (name: string) => Promise<void>;
   renameList: (listId: string, name: string) => Promise<void>;

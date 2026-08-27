@@ -9,6 +9,7 @@ export interface AuthStorageBridge {
 export interface WindowControlsBridge {
   minimize(): void;
   close(): void;
+  show(): void;
 }
 
 export interface LocalStoreData {
@@ -33,6 +34,7 @@ export interface LocalStoreBridge {
   updatePriority(todoId: string, priority: number): Promise<LocalStoreData>;
   updateLabels(todoId: string, labels: string[]): Promise<LocalStoreData>;
   updateRecurrence(todoId: string, recurrenceRule: RecurrenceRule | null): Promise<LocalStoreData>;
+  updateNotes(todoId: string, notes: string | null): Promise<LocalStoreData>;
   updateTitle(todoId: string, title: string): Promise<LocalStoreData>;
   addList(name: string): Promise<LocalStoreData>;
   renameList(listId: string, name: string): Promise<LocalStoreData>;
