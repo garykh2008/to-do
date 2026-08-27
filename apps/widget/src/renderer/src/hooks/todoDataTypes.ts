@@ -17,7 +17,8 @@ export interface TodoDataApi {
   todos: Todo[];
   loading: boolean;
   inboxList: List | null;
-  addTodo: (title: string, dueDate: string | null) => Promise<void>;
+  /** listId 不給的話兩邊實作都會照本機模式的規則落到 Inbox（見 App.tsx 呼叫端的判斷） */
+  addTodo: (title: string, dueDate: string | null, listId?: string) => Promise<void>;
   moveTodoToList: (todoId: string, targetListId: string) => Promise<void>;
   reorderTodo: (params: ReorderTodoInput) => Promise<void>;
   toggleComplete: (todoId: string, isCompleted: boolean) => Promise<void>;

@@ -37,14 +37,15 @@ export function useSupabaseTodoData(): TodoDataApi {
   const inboxList = lists.find((l) => l.is_inbox) ?? null;
 
   const addTodo = useCallback(
-    async (title: string, dueDate: string | null) => {
-      if (!inboxList) return;
-      const inboxTodos = todos.filter((t) => t.list_id === inboxList.id);
-      const lastPosition = inboxTodos.length ? Math.max(...inboxTodos.map((t) => t.position)) : null;
+    async (title: string, dueDate: string | null, listId?: string) => {
+      const targetListId = listId ?? inboxList?.id;
+      if (!targetListId) return;
+      const targetTodos = todos.filter((t) => t.list_id === targetListId);
+      const lastPosition = targetTodos.length ? Math.max(...targetTodos.map((t) => t.position)) : null;
       await getSupabase()
         .from("todos")
         .insert({
-          list_id: inboxList.id,
+          list_id: targetListId,
           title,
           due_date: dueDate,
           position: appendPosition(lastPosition),

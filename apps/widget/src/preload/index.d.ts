@@ -18,7 +18,7 @@ export interface LocalStoreData {
 
 export interface LocalStoreBridge {
   getState(): Promise<LocalStoreData>;
-  addTodo(title: string, dueDate: string | null): Promise<LocalStoreData>;
+  addTodo(title: string, dueDate: string | null, listId?: string): Promise<LocalStoreData>;
   moveTodoToList(todoId: string, targetListId: string): Promise<LocalStoreData>;
   reorderTodo(params: ReorderTodoParams): Promise<LocalStoreData>;
   toggleComplete(todoId: string, isCompleted: boolean): Promise<LocalStoreData>;

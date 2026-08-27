@@ -1,7 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { CalendarDays, Plus } from "lucide-react";
 
-export function QuickAddBar({ onAdd }: { onAdd: (title: string, dueDate: string | null) => void }) {
+export function QuickAddBar({
+  targetListName,
+  onAdd,
+}: {
+  targetListName: string;
+  onAdd: (title: string, dueDate: string | null) => void;
+}) {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [showDate, setShowDate] = useState(false);
@@ -22,7 +28,7 @@ export function QuickAddBar({ onAdd }: { onAdd: (title: string, dueDate: string 
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="快速新增到 Inbox…"
+          placeholder={`快速新增到 ${targetListName}…`}
           className="flex-1 rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-100"
         />
         <button

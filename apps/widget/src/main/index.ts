@@ -79,8 +79,8 @@ app.whenReady().then(() => {
   // 本機模式的所有資料操作都走這些 channel，實際的狀態跟業務邏輯全部在 localDataEngine 裡
   // （小工具視窗自己是這樣，本機瀏覽器頁面則是走 httpServer.ts 的 /api/rpc 打同一份 engine）。
   ipcMain.handle("local-store:get-state", () => localDataEngine.getState());
-  ipcMain.handle("local-store:add-todo", (_e, title: string, dueDate: string | null) =>
-    localDataEngine.addTodo(title, dueDate),
+  ipcMain.handle("local-store:add-todo", (_e, title: string, dueDate: string | null, listId?: string) =>
+    localDataEngine.addTodo(title, dueDate, listId),
   );
   ipcMain.handle("local-store:move-todo-to-list", (_e, todoId: string, targetListId: string) =>
     localDataEngine.moveTodoToList(todoId, targetListId),

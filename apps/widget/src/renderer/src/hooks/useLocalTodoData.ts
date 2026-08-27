@@ -30,8 +30,8 @@ export function useLocalTodoData(): TodoDataApi {
 
   const inboxList = lists.find((l) => l.is_inbox) ?? null;
 
-  const addTodo = useCallback(async (title: string, dueDate: string | null) => {
-    applyState(await window.localStore.addTodo(title, dueDate));
+  const addTodo = useCallback(async (title: string, dueDate: string | null, listId?: string) => {
+    applyState(await window.localStore.addTodo(title, dueDate, listId));
   }, []);
 
   const moveTodoToList = useCallback(async (todoId: string, targetListId: string) => {

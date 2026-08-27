@@ -17,8 +17,8 @@ type LocalStoreData = { lists: unknown[]; todos: unknown[] };
 // 處理，回傳的都是完整的最新 {lists, todos}，renderer 收到後直接整份套用到畫面。
 const localStore = {
   getState: (): Promise<LocalStoreData> => ipcRenderer.invoke("local-store:get-state"),
-  addTodo: (title: string, dueDate: string | null): Promise<LocalStoreData> =>
-    ipcRenderer.invoke("local-store:add-todo", title, dueDate),
+  addTodo: (title: string, dueDate: string | null, listId?: string): Promise<LocalStoreData> =>
+    ipcRenderer.invoke("local-store:add-todo", title, dueDate, listId),
   moveTodoToList: (todoId: string, targetListId: string): Promise<LocalStoreData> =>
     ipcRenderer.invoke("local-store:move-todo-to-list", todoId, targetListId),
   reorderTodo: (params: unknown): Promise<LocalStoreData> => ipcRenderer.invoke("local-store:reorder-todo", params),

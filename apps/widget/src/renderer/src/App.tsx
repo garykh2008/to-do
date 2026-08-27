@@ -48,6 +48,7 @@ export default function App() {
     lists,
     todos,
     loading,
+    inboxList,
     addTodo,
     moveTodoToList,
     reorderTodo,
@@ -69,6 +70,9 @@ export default function App() {
   const dragTargetRef = useRef<ResolvedDragTarget | null>(null);
 
   const visibleTodos = selectedListId ? todos.filter((t) => t.list_id === selectedListId) : todos;
+  // 「全部」或選到 Inbox 本身時都落到 Inbox；選到別的清單就新增到那個清單，
+  // 跟本機網頁版（AddTodoForm 直接帶目前頁面的 listId）行為一致。
+  const addTargetList = selectedListId ? (lists.find((l) => l.id === selectedListId) ?? null) : inboxList;
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -188,7 +192,10 @@ export default function App() {
           }}
         >
           <div className="flex flex-1 flex-col overflow-hidden border-t border-neutral-200">
-            <QuickAddBar onAdd={addTodo} />
+            <QuickAddBar
+              targetListName={addTargetList?.name ?? "Inbox"}
+              onAdd={(title, dueDate) => addTodo(title, dueDate, selectedListId ?? undefined)}
+            />
             {loading ? (
               <div className="flex flex-1 items-center justify-center text-sm text-neutral-400">載入中…</div>
             ) : (
