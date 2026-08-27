@@ -1,6 +1,7 @@
 import { app, dialog } from "electron";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { List, Todo } from "@to-do/shared";
 
 /**
  * 小工具「本機模式」的資料持久化：整份 {lists, todos} 就是一個 JSON 檔，
@@ -9,8 +10,8 @@ import { join } from "node:path";
  */
 
 export interface LocalStoreData {
-  lists: unknown[];
-  todos: unknown[];
+  lists: List[];
+  todos: Todo[];
 }
 
 function dataFilePath(): string {
@@ -44,24 +45,25 @@ export function saveLocalStore(data: LocalStoreData): void {
   renameSync(tmpFile, file);
 }
 
-/** 跳存檔對話框，把目前的資料檔複製到使用者選的位置。回傳選定的路徑，取消則回傳 null。 */
-export async function exportLocalStore(): Promise<string | null> {
+/** 跳存檔對話框，把呼叫端給的資料（一律用 localDataEngine.getState() 這份記憶體裡的最新狀態）寫到使用者選的位置。回傳選定的路徑，取消則回傳 null。 */
+export async function exportLocalStoreTo(data: LocalStoreData): Promise<string | null> {
   const { canceled, filePath } = await dialog.showSaveDialog({
     title: "匯出待辦事項資料",
     defaultPath: "todo-data.json",
     filters: [{ name: "JSON", extensions: ["json"] }],
   });
   if (canceled || !filePath) return null;
-  const data = loadLocalStore() ?? { lists: [], todos: [] };
   writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
   return filePath;
 }
 
 /**
- * 跳開檔對話框讓使用者選一個先前匯出的 JSON 檔，驗證格式後整份覆蓋掉現有的本機資料。
- * 回傳匯入後的資料（給 renderer 更新畫面），取消或格式不對回傳 null。
+ * 跳開檔對話框讓使用者選一個先前匯出的 JSON 檔，驗證格式後回傳解析出來的資料。
+ * 不在這裡直接覆蓋現有資料——呼叫端要透過 localDataEngine.replaceState() 套用，
+ * 才能讓記憶體裡的狀態（HTTP API、IPC 都讀這份）跟寫進去的檔案保持一致。
+ * 取消選檔回傳 null，格式不對會 throw。
  */
-export async function importLocalStore(): Promise<LocalStoreData | null> {
+export async function pickImportFile(): Promise<LocalStoreData | null> {
   const { canceled, filePaths } = await dialog.showOpenDialog({
     title: "匯入待辦事項資料",
     filters: [{ name: "JSON", extensions: ["json"] }],
@@ -75,6 +77,5 @@ export async function importLocalStore(): Promise<LocalStoreData | null> {
   if (!isValidData(parsed)) {
     throw new Error("檔案格式不對，不像是這個小工具匯出的資料");
   }
-  saveLocalStore(parsed);
   return parsed;
 }

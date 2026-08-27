@@ -1,6 +1,8 @@
-import { app, dialog, Menu, Tray, nativeImage, type BrowserWindow } from "electron";
+import { app, dialog, shell, Menu, Tray, nativeImage, type BrowserWindow } from "electron";
 import { resourcePath } from "./resourcePath";
-import { exportLocalStore, importLocalStore } from "./localStore";
+import { exportLocalStoreTo, pickImportFile } from "./localStore";
+import { localDataEngine } from "./localDataEngine";
+import { localWebUrl } from "./httpServer";
 
 export function createTray(mainWindow: BrowserWindow): Tray {
   const icon = nativeImage.createFromPath(resourcePath("tray-icon.png")).resize({ width: 16, height: 16 });
@@ -17,7 +19,7 @@ export function createTray(mainWindow: BrowserWindow): Tray {
   }
 
   async function handleExport() {
-    const filePath = await exportLocalStore();
+    const filePath = await exportLocalStoreTo(localDataEngine.getState());
     if (filePath) {
       dialog.showMessageBox(mainWindow, { type: "info", message: `已匯出到：\n${filePath}` });
     }
@@ -34,10 +36,11 @@ export function createTray(mainWindow: BrowserWindow): Tray {
     if (confirmed.response !== 0) return;
 
     try {
-      const data = await importLocalStore();
-      if (!data) return; // 使用者取消選檔
+      const imported = await pickImportFile();
+      if (!imported) return; // 使用者取消選檔
+      const state = localDataEngine.replaceState(imported);
       // 通知 renderer 用剛匯入的資料重新整理畫面，不用整個視窗重開。
-      mainWindow.webContents.send("local-store:imported", data);
+      mainWindow.webContents.send("local-store:changed", state);
       dialog.showMessageBox(mainWindow, { type: "info", message: "匯入完成" });
     } catch (error) {
       dialog.showErrorBox("匯入失敗", error instanceof Error ? error.message : String(error));
@@ -47,6 +50,8 @@ export function createTray(mainWindow: BrowserWindow): Tray {
   const localModeMenuItems =
     import.meta.env.VITE_DATA_MODE === "local"
       ? ([
+          { type: "separator" },
+          { label: "在瀏覽器開啟…", click: () => shell.openExternal(localWebUrl()) },
           { type: "separator" },
           { label: "匯出資料…", click: handleExport },
           { label: "匯入資料…", click: handleImport },

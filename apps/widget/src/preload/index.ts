@@ -13,15 +13,34 @@ const windowControls = {
 
 type LocalStoreData = { lists: unknown[]; todos: unknown[] };
 
+// 每個方法都是一個 invoke，main process 那邊（見 main/index.ts）用同一份 localDataEngine
+// 處理，回傳的都是完整的最新 {lists, todos}，renderer 收到後直接整份套用到畫面。
 const localStore = {
-  load: (): Promise<LocalStoreData | null> => ipcRenderer.invoke("local-store:load"),
-  save: (data: LocalStoreData): Promise<void> => ipcRenderer.invoke("local-store:save", data),
-  // 匯出/匯入本身是從系統匣選單觸發、在 main process 裡完成的（跳存檔/開檔對話框）；
-  // 這裡只負責在匯入完成後，讓已經開著的視窗知道要拿新資料重新整理畫面。
-  onImported: (callback: (data: LocalStoreData) => void): (() => void) => {
+  getState: (): Promise<LocalStoreData> => ipcRenderer.invoke("local-store:get-state"),
+  addTodo: (title: string, dueDate: string | null): Promise<LocalStoreData> =>
+    ipcRenderer.invoke("local-store:add-todo", title, dueDate),
+  moveTodoToList: (todoId: string, targetListId: string): Promise<LocalStoreData> =>
+    ipcRenderer.invoke("local-store:move-todo-to-list", todoId, targetListId),
+  reorderTodo: (params: unknown): Promise<LocalStoreData> => ipcRenderer.invoke("local-store:reorder-todo", params),
+  toggleComplete: (todoId: string, isCompleted: boolean): Promise<LocalStoreData> =>
+    ipcRenderer.invoke("local-store:toggle-complete", todoId, isCompleted),
+  deleteTodo: (todoId: string): Promise<LocalStoreData> => ipcRenderer.invoke("local-store:delete-todo", todoId),
+  addSubTodo: (parentTodoId: string, title: string): Promise<LocalStoreData> =>
+    ipcRenderer.invoke("local-store:add-sub-todo", parentTodoId, title),
+  updateDueDate: (todoId: string, dueDate: string | null): Promise<LocalStoreData> =>
+    ipcRenderer.invoke("local-store:update-due-date", todoId, dueDate),
+  updateTitle: (todoId: string, title: string): Promise<LocalStoreData> =>
+    ipcRenderer.invoke("local-store:update-title", todoId, title),
+  addList: (name: string): Promise<LocalStoreData> => ipcRenderer.invoke("local-store:add-list", name),
+  renameList: (listId: string, name: string): Promise<LocalStoreData> =>
+    ipcRenderer.invoke("local-store:rename-list", listId, name),
+  deleteList: (listId: string): Promise<LocalStoreData> => ipcRenderer.invoke("local-store:delete-list", listId),
+  // 資料在 main process 之外被改動時（系統匣匯入、本機瀏覽器頁面透過 HTTP API 改資料）推播用，
+  // 讓已經開著的小工具視窗跟著更新，不用手動重新整理。
+  onChanged: (callback: (data: LocalStoreData) => void): (() => void) => {
     const listener = (_event: unknown, data: LocalStoreData) => callback(data);
-    ipcRenderer.on("local-store:imported", listener);
-    return () => ipcRenderer.removeListener("local-store:imported", listener);
+    ipcRenderer.on("local-store:changed", listener);
+    return () => ipcRenderer.removeListener("local-store:changed", listener);
   },
 };
 

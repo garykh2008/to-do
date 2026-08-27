@@ -1,0 +1,20 @@
+@import "@fontsource-variable/inter";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-neutral-50 font-sans text-neutral-900 antialiased;
+  accent-color: theme("colors.accent.600");
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: theme("colors.neutral.300") transparent;
+}

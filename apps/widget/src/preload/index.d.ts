@@ -1,4 +1,4 @@
-import type { List, Todo } from "@to-do/shared";
+import type { List, ReorderTodoParams, Todo } from "@to-do/shared";
 
 export interface AuthStorageBridge {
   getItem(key: string): Promise<string | null>;
@@ -17,10 +17,20 @@ export interface LocalStoreData {
 }
 
 export interface LocalStoreBridge {
-  load(): Promise<LocalStoreData | null>;
-  save(data: LocalStoreData): Promise<void>;
-  /** 訂閱「系統匣選單匯入完成」事件；回傳取消訂閱函式 */
-  onImported(callback: (data: LocalStoreData) => void): () => void;
+  getState(): Promise<LocalStoreData>;
+  addTodo(title: string, dueDate: string | null): Promise<LocalStoreData>;
+  moveTodoToList(todoId: string, targetListId: string): Promise<LocalStoreData>;
+  reorderTodo(params: ReorderTodoParams): Promise<LocalStoreData>;
+  toggleComplete(todoId: string, isCompleted: boolean): Promise<LocalStoreData>;
+  deleteTodo(todoId: string): Promise<LocalStoreData>;
+  addSubTodo(parentTodoId: string, title: string): Promise<LocalStoreData>;
+  updateDueDate(todoId: string, dueDate: string | null): Promise<LocalStoreData>;
+  updateTitle(todoId: string, title: string): Promise<LocalStoreData>;
+  addList(name: string): Promise<LocalStoreData>;
+  renameList(listId: string, name: string): Promise<LocalStoreData>;
+  deleteList(listId: string): Promise<LocalStoreData>;
+  /** 訂閱「資料在別的地方被改動」事件（系統匣匯入、本機瀏覽器頁面）；回傳取消訂閱函式 */
+  onChanged(callback: (data: LocalStoreData) => void): () => void;
 }
 
 declare global {

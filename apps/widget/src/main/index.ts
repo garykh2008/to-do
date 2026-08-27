@@ -1,15 +1,25 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { join } from "node:path";
+import type { ReorderTodoParams } from "@to-do/shared";
 import { createTray } from "./tray";
 import { resourcePath } from "./resourcePath";
 import { secureGetItem, secureRemoveItem, secureSetItem } from "./secureStore";
-import { loadLocalStore, saveLocalStore, type LocalStoreData } from "./localStore";
+import { localDataEngine } from "./localDataEngine";
+import { startLocalWebServer } from "./httpServer";
 
 // 預設的 userData 路徑是依 app name 算的，兩個 build 變體不設定的話會共用同一個
 // package.json name（"widget"），本機模式的 todo-data.json 跟線上模式的 session token
 // 就會存進同一個資料夾。要在第一次呼叫 app.getPath('userData') 之前設好，這裡是最早的時機。
-if (import.meta.env.VITE_DATA_MODE === "local") {
+const IS_LOCAL_MODE = import.meta.env.VITE_DATA_MODE === "local";
+if (IS_LOCAL_MODE) {
   app.setName("todo-widget-local");
+}
+
+// 常駐系統匣的 App 很容易被不小心開第二次（捷徑點兩下、開機自動啟動又手動再開一次）。
+// 沒有這道鎖的話兩個實例會各自在記憶體裡維護一份 {lists, todos}、各自寫同一個資料檔，
+// 後寫的蓋掉先寫的，等於随機遺失其中一邊的修改。拿不到鎖就直接結束，讓既有實例處理。
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
 }
 
 let mainWindow: BrowserWindow | null = null;
@@ -58,15 +68,53 @@ app.whenReady().then(() => {
   ipcMain.on("window:minimize", () => mainWindow?.minimize());
   ipcMain.on("window:close", () => mainWindow?.close());
 
-  ipcMain.handle("local-store:load", () => loadLocalStore());
-  ipcMain.handle("local-store:save", (_event, data: LocalStoreData) => saveLocalStore(data));
+  // 本機模式的所有資料操作都走這些 channel，實際的狀態跟業務邏輯全部在 localDataEngine 裡
+  // （小工具視窗自己是這樣，本機瀏覽器頁面則是走 httpServer.ts 的 /api/rpc 打同一份 engine）。
+  ipcMain.handle("local-store:get-state", () => localDataEngine.getState());
+  ipcMain.handle("local-store:add-todo", (_e, title: string, dueDate: string | null) =>
+    localDataEngine.addTodo(title, dueDate),
+  );
+  ipcMain.handle("local-store:move-todo-to-list", (_e, todoId: string, targetListId: string) =>
+    localDataEngine.moveTodoToList(todoId, targetListId),
+  );
+  ipcMain.handle("local-store:reorder-todo", (_e, params: ReorderTodoParams) => localDataEngine.reorderTodo(params));
+  ipcMain.handle("local-store:toggle-complete", (_e, todoId: string, isCompleted: boolean) =>
+    localDataEngine.toggleComplete(todoId, isCompleted),
+  );
+  ipcMain.handle("local-store:delete-todo", (_e, todoId: string) => localDataEngine.deleteTodo(todoId));
+  ipcMain.handle("local-store:add-sub-todo", (_e, parentTodoId: string, title: string) =>
+    localDataEngine.addSubTodo(parentTodoId, title),
+  );
+  ipcMain.handle("local-store:update-due-date", (_e, todoId: string, dueDate: string | null) =>
+    localDataEngine.updateDueDate(todoId, dueDate),
+  );
+  ipcMain.handle("local-store:update-title", (_e, todoId: string, title: string) =>
+    localDataEngine.updateTitle(todoId, title),
+  );
+  ipcMain.handle("local-store:add-list", (_e, name: string) => localDataEngine.addList(name));
+  ipcMain.handle("local-store:rename-list", (_e, listId: string, name: string) =>
+    localDataEngine.renameList(listId, name),
+  );
+  ipcMain.handle("local-store:delete-list", (_e, listId: string) => localDataEngine.deleteList(listId));
 
   createWindow();
   if (mainWindow) createTray(mainWindow);
+  if (IS_LOCAL_MODE) {
+    // 從本機瀏覽器頁面（HTTP API）改的資料，推給小工具視窗即時反映，不用手動重新整理。
+    startLocalWebServer((state) => mainWindow?.webContents.send("local-store:changed", state));
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+// 被擋下的第二個實例會觸發原本那個實例的這個事件；比照一般常駐 App 的習慣，
+// 直接把已經開著的視窗叫出來，而不是靜默忽略讓使用者以為點了沒反應。
+app.on("second-instance", () => {
+  if (!mainWindow) return;
+  mainWindow.show();
+  mainWindow.focus();
 });
 
 app.on("before-quit", () => {

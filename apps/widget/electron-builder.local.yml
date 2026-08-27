@@ -8,6 +8,8 @@ files:
 extraResources:
   - from: resources
     to: .
+  - from: ../local-web/dist
+    to: local-web
 win:
   target: nsis
   icon: resources/icon.png

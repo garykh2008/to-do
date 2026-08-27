@@ -8,7 +8,7 @@
     "build": "electron-vite build",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "package:win": "electron-vite build && electron-builder --win",
-    "package:win:local": "cross-env VITE_DATA_MODE=local electron-vite build && electron-builder --win -c electron-builder.local.yml"
+    "package:win:local": "pnpm --filter local-web build && cross-env VITE_DATA_MODE=local electron-vite build && electron-builder --win -c electron-builder.local.yml"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
