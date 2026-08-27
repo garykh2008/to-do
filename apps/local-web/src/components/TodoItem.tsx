@@ -8,11 +8,9 @@ import {
   CornerDownRight,
   Flag,
   GripVertical,
+  MoreHorizontal,
   Plus,
   Repeat,
-  StickyNote,
-  Tag,
-  Trash2,
 } from "lucide-react";
 import {
   cyclePriority,
@@ -65,6 +63,7 @@ export function TodoItem({
   const [labelsEditing, setLabelsEditing] = useState(false);
   const [recurrenceEditing, setRecurrenceEditing] = useState(false);
   const [notesEditing, setNotesEditing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const dragData: TodoDragData = {
     todoId: todo.id,
@@ -253,24 +252,6 @@ export function TodoItem({
             <Flag size={14} fill={todo.priority === NO_PRIORITY ? "none" : "currentColor"} />
           </button>
 
-          <button
-            type="button"
-            onClick={() => setLabelsEditing((v) => !v)}
-            className={`shrink-0 rounded p-1 hover:bg-neutral-100 ${todo.labels.length > 0 ? "text-accent-600" : "text-neutral-300"}`}
-            aria-label="設定標籤"
-          >
-            <Tag size={14} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setNotesEditing((v) => !v)}
-            className={`shrink-0 rounded p-1 hover:bg-neutral-100 ${todo.notes ? "text-accent-600" : "text-neutral-300"}`}
-            aria-label="設定備註"
-          >
-            <StickyNote size={14} />
-          </button>
-
           {recurrenceEditing ? (
             <select
               autoFocus
@@ -294,15 +275,17 @@ export function TodoItem({
               ))}
             </select>
           ) : (
-            <button
-              type="button"
-              onClick={() => setRecurrenceEditing(true)}
-              className={`shrink-0 rounded p-1 hover:bg-neutral-100 ${todo.recurrence_rule ? "text-accent-600" : "text-neutral-300"}`}
-              aria-label="設定重複規則"
-              title={todo.recurrence_rule ? describeRecurrence(todo.recurrence_rule) : "設定重複"}
-            >
-              <Repeat size={14} />
-            </button>
+            todo.recurrence_rule && (
+              <button
+                type="button"
+                onClick={() => setRecurrenceEditing(true)}
+                className="shrink-0 rounded p-1 text-accent-600 hover:bg-neutral-100"
+                aria-label="設定重複規則"
+                title={describeRecurrence(todo.recurrence_rule)}
+              >
+                <Repeat size={14} />
+              </button>
+            )
           )}
 
           {!isChild && (
@@ -316,14 +299,64 @@ export function TodoItem({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => deleteTodo.mutate({ id: todo.id, listId: todo.list_id })}
-            className="shrink-0 rounded p-1 text-neutral-300 hover:bg-red-50 hover:text-red-600"
-            aria-label="刪除"
-          >
-            <Trash2 size={14} />
-          </button>
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="rounded p-1 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-600"
+              aria-label="更多操作"
+            >
+              <MoreHorizontal size={14} />
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute top-full right-0 z-20 mt-1 min-w-[120px] rounded-md border border-neutral-200 bg-white py-1 text-xs whitespace-nowrap shadow-popover">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLabelsEditing(true);
+                      setMenuOpen(false);
+                    }}
+                    className="block w-full px-3 py-1.5 text-left hover:bg-neutral-100"
+                  >
+                    設定標籤
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotesEditing(true);
+                      setMenuOpen(false);
+                    }}
+                    className="block w-full px-3 py-1.5 text-left hover:bg-neutral-100"
+                  >
+                    設定備註
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecurrenceEditing(true);
+                      setMenuOpen(false);
+                    }}
+                    className="block w-full px-3 py-1.5 text-left hover:bg-neutral-100"
+                  >
+                    設定重複
+                  </button>
+                  <div className="my-1 border-t border-neutral-100" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      deleteTodo.mutate({ id: todo.id, listId: todo.list_id });
+                      setMenuOpen(false);
+                    }}
+                    className="block w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-50"
+                  >
+                    刪除
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
