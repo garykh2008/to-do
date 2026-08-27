@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { CalendarDays, Plus } from "lucide-react";
+import { parseQuickAdd } from "@to-do/shared";
 
 export function QuickAddBar({
   targetListName,
   onAdd,
 }: {
   targetListName: string;
-  onAdd: (title: string, dueDate: string | null) => void;
+  onAdd: (title: string, dueDate: string | null, extra?: { priority?: number; labels?: string[] }) => void;
 }) {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -16,7 +17,12 @@ export function QuickAddBar({
     event.preventDefault();
     const trimmed = title.trim();
     if (!trimmed) return;
-    onAdd(trimmed, dueDate || null);
+    const today = new Date().toISOString().slice(0, 10);
+    const parsed = parseQuickAdd(trimmed, today);
+    onAdd(parsed.title || trimmed, parsed.dueDate ?? (dueDate || null), {
+      priority: parsed.priority ?? undefined,
+      labels: parsed.labels.length > 0 ? parsed.labels : undefined,
+    });
     setTitle("");
     setDueDate("");
     setShowDate(false);
@@ -28,7 +34,7 @@ export function QuickAddBar({
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder={`快速新增到 ${targetListName}…`}
+          placeholder={`快速新增到 ${targetListName}…（明天 p1 @標籤）`}
           className="flex-1 rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-100"
         />
         <button

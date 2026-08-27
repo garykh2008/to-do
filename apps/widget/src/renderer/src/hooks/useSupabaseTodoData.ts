@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
-import { appendPosition, reorderTodo as reorderTodoInDb, type List, type Todo } from "@to-do/shared";
+import {
+  appendPosition,
+  reorderTodo as reorderTodoInDb,
+  resolveCompletion,
+  type List,
+  type RecurrenceRule,
+  type Todo,
+} from "@to-do/shared";
 import { getSupabase } from "../lib/supabaseClient";
 import type { TodoDataApi } from "./todoDataTypes";
+
+const TODAY = new Date().toISOString().slice(0, 10);
 
 export function useSupabaseTodoData(): TodoDataApi {
   const [lists, setLists] = useState<List[]>([]);
@@ -37,7 +46,7 @@ export function useSupabaseTodoData(): TodoDataApi {
   const inboxList = lists.find((l) => l.is_inbox) ?? null;
 
   const addTodo = useCallback(
-    async (title: string, dueDate: string | null, listId?: string) => {
+    async (title: string, dueDate: string | null, listId?: string, extra?: { priority?: number; labels?: string[] }) => {
       const targetListId = listId ?? inboxList?.id;
       if (!targetListId) return;
       const targetTodos = todos.filter((t) => t.list_id === targetListId);
@@ -48,6 +57,8 @@ export function useSupabaseTodoData(): TodoDataApi {
           list_id: targetListId,
           title,
           due_date: dueDate,
+          ...(extra?.priority !== undefined ? { priority: extra.priority } : {}),
+          ...(extra?.labels !== undefined ? { labels: extra.labels } : {}),
           position: appendPosition(lastPosition),
         });
       reload();
@@ -92,13 +103,19 @@ export function useSupabaseTodoData(): TodoDataApi {
 
   const toggleComplete = useCallback(
     async (todoId: string, isCompleted: boolean) => {
+      const todo = todos.find((t) => t.id === todoId);
+      const resolved = todo ? resolveCompletion(todo, isCompleted, TODAY) : { is_completed: isCompleted };
       await getSupabase()
         .from("todos")
-        .update({ is_completed: isCompleted, completed_at: isCompleted ? new Date().toISOString() : null })
+        .update({
+          is_completed: resolved.is_completed,
+          completed_at: resolved.is_completed ? new Date().toISOString() : null,
+          ...(resolved.due_date ? { due_date: resolved.due_date } : {}),
+        })
         .eq("id", todoId);
       reload();
     },
-    [reload],
+    [todos, reload],
   );
 
   const deleteTodo = useCallback(
@@ -129,6 +146,30 @@ export function useSupabaseTodoData(): TodoDataApi {
   const updateDueDate = useCallback(
     async (todoId: string, dueDate: string | null) => {
       await getSupabase().from("todos").update({ due_date: dueDate }).eq("id", todoId);
+      reload();
+    },
+    [reload],
+  );
+
+  const updatePriority = useCallback(
+    async (todoId: string, priority: number) => {
+      await getSupabase().from("todos").update({ priority }).eq("id", todoId);
+      reload();
+    },
+    [reload],
+  );
+
+  const updateLabels = useCallback(
+    async (todoId: string, labels: string[]) => {
+      await getSupabase().from("todos").update({ labels }).eq("id", todoId);
+      reload();
+    },
+    [reload],
+  );
+
+  const updateRecurrence = useCallback(
+    async (todoId: string, recurrenceRule: RecurrenceRule | null) => {
+      await getSupabase().from("todos").update({ recurrence_rule: recurrenceRule }).eq("id", todoId);
       reload();
     },
     [reload],
@@ -181,6 +222,9 @@ export function useSupabaseTodoData(): TodoDataApi {
     deleteTodo,
     addSubTodo,
     updateDueDate,
+    updatePriority,
+    updateLabels,
+    updateRecurrence,
     updateTitle,
     addList,
     renameList,

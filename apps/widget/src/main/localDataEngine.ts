@@ -2,8 +2,11 @@ import { randomUUID } from "node:crypto";
 import {
   appendPosition,
   firstPosition,
+  NO_PRIORITY,
   reorderTodoCore,
+  resolveCompletion,
   type List,
+  type RecurrenceRule,
   type ReorderTodoParams,
   type Todo,
   type TodoPositionSource,
@@ -35,6 +38,8 @@ function newTodo(input: {
   parentId?: string | null;
   title: string;
   dueDate?: string | null;
+  priority?: number;
+  labels?: string[];
   position: number;
 }): Todo {
   return {
@@ -47,6 +52,9 @@ function newTodo(input: {
     is_completed: false,
     completed_at: null,
     due_date: input.dueDate ?? null,
+    priority: input.priority ?? NO_PRIORITY,
+    labels: input.labels ?? [],
+    recurrence_rule: null,
     position: input.position,
     created_at: nowIso(),
     updated_at: nowIso(),
@@ -101,8 +109,14 @@ class LocalDataEngine {
     return this.getState();
   }
 
-  /** listId 不給的話沿用小工具的行為：一律加到 Inbox（本機網頁版會傳目前選的清單） */
-  addTodo(title: string, dueDate: string | null, listId?: string): LocalDataState {
+  /** listId 不給的話沿用小工具的行為：一律加到 Inbox（本機網頁版會傳目前選的清單）。
+   * extra 是 Quick Add 自然語言解析出來的優先權/標籤，建立當下就一起寫入。 */
+  addTodo(
+    title: string,
+    dueDate: string | null,
+    listId?: string,
+    extra?: { priority?: number; labels?: string[] },
+  ): LocalDataState {
     this.ensureLoaded();
     const targetList = listId ? this.lists.find((l) => l.id === listId) : this.lists.find((l) => l.is_inbox);
     if (targetList) {
@@ -110,7 +124,14 @@ class LocalDataEngine {
       const lastPosition = siblings.length ? Math.max(...siblings.map((t) => t.position)) : null;
       this.todos = [
         ...this.todos,
-        newTodo({ listId: targetList.id, title, dueDate, position: appendPosition(lastPosition) }),
+        newTodo({
+          listId: targetList.id,
+          title,
+          dueDate,
+          priority: extra?.priority,
+          labels: extra?.labels,
+          position: appendPosition(lastPosition),
+        }),
       ];
       this.persist();
     }
@@ -172,11 +193,17 @@ class LocalDataEngine {
 
   toggleComplete(todoId: string, isCompleted: boolean): LocalDataState {
     this.ensureLoaded();
-    this.todos = this.todos.map((t) =>
-      t.id === todoId
-        ? { ...t, is_completed: isCompleted, completed_at: isCompleted ? nowIso() : null, updated_at: nowIso() }
-        : t,
-    );
+    this.todos = this.todos.map((t) => {
+      if (t.id !== todoId) return t;
+      const resolved = resolveCompletion(t, isCompleted, nowIso().slice(0, 10));
+      return {
+        ...t,
+        is_completed: resolved.is_completed,
+        completed_at: resolved.is_completed ? nowIso() : null,
+        due_date: resolved.due_date ?? t.due_date,
+        updated_at: nowIso(),
+      };
+    });
     this.persist();
     return this.getState();
   }
@@ -212,6 +239,29 @@ class LocalDataEngine {
   updateDueDate(todoId: string, dueDate: string | null): LocalDataState {
     this.ensureLoaded();
     this.todos = this.todos.map((t) => (t.id === todoId ? { ...t, due_date: dueDate, updated_at: nowIso() } : t));
+    this.persist();
+    return this.getState();
+  }
+
+  updatePriority(todoId: string, priority: number): LocalDataState {
+    this.ensureLoaded();
+    this.todos = this.todos.map((t) => (t.id === todoId ? { ...t, priority, updated_at: nowIso() } : t));
+    this.persist();
+    return this.getState();
+  }
+
+  updateLabels(todoId: string, labels: string[]): LocalDataState {
+    this.ensureLoaded();
+    this.todos = this.todos.map((t) => (t.id === todoId ? { ...t, labels, updated_at: nowIso() } : t));
+    this.persist();
+    return this.getState();
+  }
+
+  updateRecurrence(todoId: string, recurrenceRule: RecurrenceRule | null): LocalDataState {
+    this.ensureLoaded();
+    this.todos = this.todos.map((t) =>
+      t.id === todoId ? { ...t, recurrence_rule: recurrenceRule, updated_at: nowIso() } : t,
+    );
     this.persist();
     return this.getState();
   }
@@ -260,7 +310,12 @@ export async function dispatchLocalEngine(method: string, args: unknown[]): Prom
     case "getState":
       return localDataEngine.getState();
     case "addTodo":
-      return localDataEngine.addTodo(args[0] as string, args[1] as string | null, args[2] as string | undefined);
+      return localDataEngine.addTodo(
+        args[0] as string,
+        args[1] as string | null,
+        args[2] as string | undefined,
+        args[3] as { priority?: number; labels?: string[] } | undefined,
+      );
     case "moveTodoToList":
       return localDataEngine.moveTodoToList(args[0] as string, args[1] as string);
     case "reorderTodo":
@@ -273,6 +328,12 @@ export async function dispatchLocalEngine(method: string, args: unknown[]): Prom
       return localDataEngine.addSubTodo(args[0] as string, args[1] as string);
     case "updateDueDate":
       return localDataEngine.updateDueDate(args[0] as string, args[1] as string | null);
+    case "updatePriority":
+      return localDataEngine.updatePriority(args[0] as string, args[1] as number);
+    case "updateLabels":
+      return localDataEngine.updateLabels(args[0] as string, args[1] as string[]);
+    case "updateRecurrence":
+      return localDataEngine.updateRecurrence(args[0] as string, args[1] as RecurrenceRule | null);
     case "updateTitle":
       return localDataEngine.updateTitle(args[0] as string, args[1] as string);
     case "addList":

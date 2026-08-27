@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+const recurrenceRuleSchema = z.object({
+  freq: z.enum(["daily", "weekly", "monthly", "yearly"]),
+  interval: z.number().int().min(1).max(365),
+  byDay: z.array(z.enum(["MO", "TU", "WE", "TH", "FR", "SA", "SU"])).optional(),
+});
+
 export const listInsertSchema = z.object({
   name: z.string().trim().min(1, "清單名稱不能為空").max(100),
   color: z
@@ -16,6 +22,9 @@ export const todoInsertSchema = z.object({
   title: z.string().trim().min(1, "標題不能為空").max(500),
   notes: z.string().max(5000).optional(),
   due_date: z.string().date().optional().nullable(),
+  priority: z.number().int().min(1).max(4).optional(),
+  labels: z.array(z.string().trim().min(1).max(30)).max(10).optional(),
+  recurrence_rule: recurrenceRuleSchema.optional().nullable(),
 });
 
 export const todoUpdateSchema = z.object({
@@ -24,6 +33,9 @@ export const todoUpdateSchema = z.object({
   title: z.string().trim().min(1).max(500).optional(),
   notes: z.string().max(5000).optional().nullable(),
   due_date: z.string().date().optional().nullable(),
+  priority: z.number().int().min(1).max(4).optional(),
+  labels: z.array(z.string().trim().min(1).max(30)).max(10).optional(),
+  recurrence_rule: recurrenceRuleSchema.optional().nullable(),
   is_completed: z.boolean().optional(),
   position: z.number().int().optional(),
 });

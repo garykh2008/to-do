@@ -1,4 +1,4 @@
-import type { List, ReorderTodoParams, Todo } from "@to-do/shared";
+import type { List, RecurrenceRule, ReorderTodoParams, Todo } from "@to-do/shared";
 
 export interface AuthStorageBridge {
   getItem(key: string): Promise<string | null>;
@@ -18,13 +18,21 @@ export interface LocalStoreData {
 
 export interface LocalStoreBridge {
   getState(): Promise<LocalStoreData>;
-  addTodo(title: string, dueDate: string | null, listId?: string): Promise<LocalStoreData>;
+  addTodo(
+    title: string,
+    dueDate: string | null,
+    listId?: string,
+    extra?: { priority?: number; labels?: string[] },
+  ): Promise<LocalStoreData>;
   moveTodoToList(todoId: string, targetListId: string): Promise<LocalStoreData>;
   reorderTodo(params: ReorderTodoParams): Promise<LocalStoreData>;
   toggleComplete(todoId: string, isCompleted: boolean): Promise<LocalStoreData>;
   deleteTodo(todoId: string): Promise<LocalStoreData>;
   addSubTodo(parentTodoId: string, title: string): Promise<LocalStoreData>;
   updateDueDate(todoId: string, dueDate: string | null): Promise<LocalStoreData>;
+  updatePriority(todoId: string, priority: number): Promise<LocalStoreData>;
+  updateLabels(todoId: string, labels: string[]): Promise<LocalStoreData>;
+  updateRecurrence(todoId: string, recurrenceRule: RecurrenceRule | null): Promise<LocalStoreData>;
   updateTitle(todoId: string, title: string): Promise<LocalStoreData>;
   addList(name: string): Promise<LocalStoreData>;
   renameList(listId: string, name: string): Promise<LocalStoreData>;

@@ -1,7 +1,22 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { CalendarDays, ChevronDown, ChevronRight, CircleCheck, CornerDownRight, GripVertical, Plus } from "lucide-react";
-import { groupTodosByParent, type DropZone, type List, type Todo } from "@to-do/shared";
+import { CalendarDays, ChevronDown, ChevronRight, CircleCheck, CornerDownRight, Flag, GripVertical, Plus, Repeat, Tag } from "lucide-react";
+import {
+  cyclePriority,
+  describeRecurrence,
+  groupTodosByParent,
+  hashLabelToColor,
+  NO_PRIORITY,
+  parseLabelsInput,
+  priorityColor,
+  RECURRENCE_PRESETS,
+  type DropZone,
+  type List,
+  type RecurrenceRule,
+  type Todo,
+} from "@to-do/shared";
+
+const KNOWN_LABELS_DATALIST_ID = "widget-known-labels";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -24,6 +39,9 @@ function TodoRow({
   onMove,
   onDelete,
   onUpdateDueDate,
+  onUpdatePriority,
+  onUpdateLabels,
+  onUpdateRecurrence,
   onUpdateTitle,
   onToggleAddSub,
   isChild = false,
@@ -39,6 +57,9 @@ function TodoRow({
   onMove: (todoId: string, targetListId: string) => void;
   onDelete: (todoId: string) => void;
   onUpdateDueDate: (todoId: string, dueDate: string | null) => void;
+  onUpdatePriority: (todoId: string, priority: number) => void;
+  onUpdateLabels: (todoId: string, labels: string[]) => void;
+  onUpdateRecurrence: (todoId: string, recurrenceRule: RecurrenceRule | null) => void;
   onUpdateTitle: (todoId: string, title: string) => void;
   onToggleAddSub?: () => void;
   isChild?: boolean;
@@ -61,6 +82,8 @@ function TodoRow({
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [dateEditing, setDateEditing] = useState(false);
+  const [labelsEditing, setLabelsEditing] = useState(false);
+  const [recurrenceEditing, setRecurrenceEditing] = useState(false);
   const [titleEditing, setTitleEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(todo.title);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -201,8 +224,90 @@ function TodoRow({
                 <CalendarDays size={10} />
               </button>
             )}
+
+            {labelsEditing ? (
+              <input
+                type="text"
+                autoFocus
+                list={KNOWN_LABELS_DATALIST_ID}
+                defaultValue={todo.labels.join(", ")}
+                onBlur={(e) => {
+                  onUpdateLabels(todo.id, parseLabelsInput(e.currentTarget.value));
+                  setLabelsEditing(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                  if (e.key === "Escape") setLabelsEditing(false);
+                }}
+                placeholder="標籤1, 標籤2"
+                className="w-[6rem] shrink-0 rounded border border-accent-300 px-1 outline-none"
+              />
+            ) : todo.labels.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setLabelsEditing(true)}
+                className="flex min-w-0 shrink-0 items-center gap-0.5"
+              >
+                {todo.labels.map((label) => (
+                  <span
+                    key={label}
+                    className={`truncate rounded px-1 ${hashLabelToColor(label).bg} ${hashLabelToColor(label).text}`}
+                  >
+                    {label}
+                  </span>
+                ))}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setLabelsEditing(true)}
+                className="shrink-0 text-neutral-300 hover:text-neutral-500"
+                aria-label="設定標籤"
+              >
+                <Tag size={10} />
+              </button>
+            )}
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={() => onUpdatePriority(todo.id, cyclePriority(todo.priority))}
+          className={`shrink-0 rounded p-1 ${priorityColor(todo.priority).text} hover:bg-neutral-100`}
+          aria-label="設定優先權"
+        >
+          <Flag size={12} fill={todo.priority === NO_PRIORITY ? "none" : "currentColor"} />
+        </button>
+
+        {recurrenceEditing ? (
+          <select
+            autoFocus
+            value={todo.recurrence_rule ? JSON.stringify(todo.recurrence_rule) : ""}
+            onChange={(e) => {
+              onUpdateRecurrence(todo.id, e.target.value ? (JSON.parse(e.target.value) as RecurrenceRule) : null);
+              setRecurrenceEditing(false);
+            }}
+            onBlur={() => setRecurrenceEditing(false)}
+            className="w-[4.5rem] shrink-0 rounded border border-accent-300 text-[10px] outline-none"
+          >
+            <option value="">不重複</option>
+            {RECURRENCE_PRESETS.map((preset) => (
+              <option key={preset.label} value={JSON.stringify(preset.rule)}>
+                {preset.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setRecurrenceEditing(true)}
+            className={`shrink-0 rounded p-1 hover:bg-neutral-100 ${todo.recurrence_rule ? "text-accent-600" : "text-neutral-300"}`}
+            aria-label="設定重複規則"
+            title={todo.recurrence_rule ? describeRecurrence(todo.recurrence_rule) : "設定重複"}
+          >
+            <Repeat size={12} />
+          </button>
+        )}
 
         {onToggleAddSub && (
           <button
@@ -309,7 +414,11 @@ export function CompactList({
   onDelete,
   onAddSub,
   onUpdateDueDate,
+  onUpdatePriority,
+  onUpdateLabels,
+  onUpdateRecurrence,
   onUpdateTitle,
+  knownLabels,
 }: {
   todos: Todo[];
   lists: List[];
@@ -319,7 +428,11 @@ export function CompactList({
   onDelete: (todoId: string) => void;
   onAddSub: (parentTodo: Todo, title: string) => void;
   onUpdateDueDate: (todoId: string, dueDate: string | null) => void;
+  onUpdatePriority: (todoId: string, priority: number) => void;
+  onUpdateLabels: (todoId: string, labels: string[]) => void;
+  onUpdateRecurrence: (todoId: string, recurrenceRule: RecurrenceRule | null) => void;
   onUpdateTitle: (todoId: string, title: string) => void;
+  knownLabels: string[];
 }) {
   const listNameById = new Map(lists.map((l) => [l.id, l.name]));
 
@@ -369,6 +482,9 @@ export function CompactList({
           onMove={onMove}
           onDelete={onDelete}
           onUpdateDueDate={onUpdateDueDate}
+          onUpdatePriority={onUpdatePriority}
+          onUpdateLabels={onUpdateLabels}
+          onUpdateRecurrence={onUpdateRecurrence}
           onUpdateTitle={onUpdateTitle}
           onToggleAddSub={() => setAddingSubId((id) => (id === todo.id ? null : todo.id))}
         />
@@ -395,6 +511,9 @@ export function CompactList({
                 onMove={onMove}
                 onDelete={onDelete}
                 onUpdateDueDate={onUpdateDueDate}
+                onUpdatePriority={onUpdatePriority}
+                onUpdateLabels={onUpdateLabels}
+                onUpdateRecurrence={onUpdateRecurrence}
                 onUpdateTitle={onUpdateTitle}
                 isChild
               />
@@ -407,6 +526,11 @@ export function CompactList({
 
   return (
     <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto p-2">
+      <datalist id={KNOWN_LABELS_DATALIST_ID}>
+        {knownLabels.map((label) => (
+          <option key={label} value={label} />
+        ))}
+      </datalist>
       {incompleteTop.length === 0 && (
         <div className="flex flex-1 flex-col items-center justify-center gap-1.5 py-6 text-neutral-300">
           <CircleCheck size={22} />

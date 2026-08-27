@@ -1,4 +1,4 @@
-import type { List, Todo } from "@to-do/shared";
+import type { List, RecurrenceRule, Todo } from "@to-do/shared";
 
 export interface ReorderTodoInput {
   id: string;
@@ -18,13 +18,21 @@ export interface TodoDataApi {
   loading: boolean;
   inboxList: List | null;
   /** listId 不給的話兩邊實作都會照本機模式的規則落到 Inbox（見 App.tsx 呼叫端的判斷） */
-  addTodo: (title: string, dueDate: string | null, listId?: string) => Promise<void>;
+  addTodo: (
+    title: string,
+    dueDate: string | null,
+    listId?: string,
+    extra?: { priority?: number; labels?: string[] },
+  ) => Promise<void>;
   moveTodoToList: (todoId: string, targetListId: string) => Promise<void>;
   reorderTodo: (params: ReorderTodoInput) => Promise<void>;
   toggleComplete: (todoId: string, isCompleted: boolean) => Promise<void>;
   deleteTodo: (todoId: string) => Promise<void>;
   addSubTodo: (parentTodo: Todo, title: string) => Promise<void>;
   updateDueDate: (todoId: string, dueDate: string | null) => Promise<void>;
+  updatePriority: (todoId: string, priority: number) => Promise<void>;
+  updateLabels: (todoId: string, labels: string[]) => Promise<void>;
+  updateRecurrence: (todoId: string, recurrenceRule: RecurrenceRule | null) => Promise<void>;
   updateTitle: (todoId: string, title: string) => Promise<void>;
   addList: (name: string) => Promise<void>;
   renameList: (listId: string, name: string) => Promise<void>;

@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { join } from "node:path";
-import type { ReorderTodoParams } from "@to-do/shared";
+import type { ReorderTodoParams, RecurrenceRule } from "@to-do/shared";
 import { createTray } from "./tray";
 import { resourcePath } from "./resourcePath";
 import { secureGetItem, secureRemoveItem, secureSetItem } from "./secureStore";
@@ -79,8 +79,10 @@ app.whenReady().then(() => {
   // 本機模式的所有資料操作都走這些 channel，實際的狀態跟業務邏輯全部在 localDataEngine 裡
   // （小工具視窗自己是這樣，本機瀏覽器頁面則是走 httpServer.ts 的 /api/rpc 打同一份 engine）。
   ipcMain.handle("local-store:get-state", () => localDataEngine.getState());
-  ipcMain.handle("local-store:add-todo", (_e, title: string, dueDate: string | null, listId?: string) =>
-    localDataEngine.addTodo(title, dueDate, listId),
+  ipcMain.handle(
+    "local-store:add-todo",
+    (_e, title: string, dueDate: string | null, listId?: string, extra?: { priority?: number; labels?: string[] }) =>
+      localDataEngine.addTodo(title, dueDate, listId, extra),
   );
   ipcMain.handle("local-store:move-todo-to-list", (_e, todoId: string, targetListId: string) =>
     localDataEngine.moveTodoToList(todoId, targetListId),
@@ -95,6 +97,15 @@ app.whenReady().then(() => {
   );
   ipcMain.handle("local-store:update-due-date", (_e, todoId: string, dueDate: string | null) =>
     localDataEngine.updateDueDate(todoId, dueDate),
+  );
+  ipcMain.handle("local-store:update-priority", (_e, todoId: string, priority: number) =>
+    localDataEngine.updatePriority(todoId, priority),
+  );
+  ipcMain.handle("local-store:update-labels", (_e, todoId: string, labels: string[]) =>
+    localDataEngine.updateLabels(todoId, labels),
+  );
+  ipcMain.handle("local-store:update-recurrence", (_e, todoId: string, recurrenceRule: RecurrenceRule | null) =>
+    localDataEngine.updateRecurrence(todoId, recurrenceRule),
   );
   ipcMain.handle("local-store:update-title", (_e, todoId: string, title: string) =>
     localDataEngine.updateTitle(todoId, title),

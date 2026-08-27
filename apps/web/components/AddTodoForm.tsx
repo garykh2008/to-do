@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { CalendarDays, Plus } from "lucide-react";
+import { parseQuickAdd } from "@to-do/shared";
 import { useAddTodo } from "@/lib/queries";
 
 export function AddTodoForm({ listId }: { listId: string }) {
@@ -14,7 +15,15 @@ export function AddTodoForm({ listId }: { listId: string }) {
     event.preventDefault();
     const trimmed = title.trim();
     if (!trimmed) return;
-    addTodo.mutate({ listId, title: trimmed, dueDate: dueDate || null });
+    const today = new Date().toISOString().slice(0, 10);
+    const parsed = parseQuickAdd(trimmed, today);
+    addTodo.mutate({
+      listId,
+      title: parsed.title || trimmed,
+      dueDate: parsed.dueDate ?? (dueDate || null),
+      priority: parsed.priority ?? undefined,
+      labels: parsed.labels.length > 0 ? parsed.labels : undefined,
+    });
     setTitle("");
     setDueDate("");
     setShowDate(false);
@@ -30,7 +39,7 @@ export function AddTodoForm({ listId }: { listId: string }) {
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="新增待辦事項…"
+          placeholder="新增待辦事項…（可以打「明天 p1 @標籤」）"
           className="min-w-0 flex-1 text-sm outline-none placeholder:text-neutral-400"
         />
         <button

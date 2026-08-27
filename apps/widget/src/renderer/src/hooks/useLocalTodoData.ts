@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { List, Todo } from "@to-do/shared";
+import type { List, RecurrenceRule, Todo } from "@to-do/shared";
 import type { TodoDataApi } from "./todoDataTypes";
 
 /**
@@ -30,9 +30,12 @@ export function useLocalTodoData(): TodoDataApi {
 
   const inboxList = lists.find((l) => l.is_inbox) ?? null;
 
-  const addTodo = useCallback(async (title: string, dueDate: string | null, listId?: string) => {
-    applyState(await window.localStore.addTodo(title, dueDate, listId));
-  }, []);
+  const addTodo = useCallback(
+    async (title: string, dueDate: string | null, listId?: string, extra?: { priority?: number; labels?: string[] }) => {
+      applyState(await window.localStore.addTodo(title, dueDate, listId, extra));
+    },
+    [],
+  );
 
   const moveTodoToList = useCallback(async (todoId: string, targetListId: string) => {
     applyState(await window.localStore.moveTodoToList(todoId, targetListId));
@@ -67,6 +70,18 @@ export function useLocalTodoData(): TodoDataApi {
     applyState(await window.localStore.updateDueDate(todoId, dueDate));
   }, []);
 
+  const updatePriority = useCallback(async (todoId: string, priority: number) => {
+    applyState(await window.localStore.updatePriority(todoId, priority));
+  }, []);
+
+  const updateLabels = useCallback(async (todoId: string, labels: string[]) => {
+    applyState(await window.localStore.updateLabels(todoId, labels));
+  }, []);
+
+  const updateRecurrence = useCallback(async (todoId: string, recurrenceRule: RecurrenceRule | null) => {
+    applyState(await window.localStore.updateRecurrence(todoId, recurrenceRule));
+  }, []);
+
   const updateTitle = useCallback(async (todoId: string, title: string) => {
     applyState(await window.localStore.updateTitle(todoId, title));
   }, []);
@@ -95,6 +110,9 @@ export function useLocalTodoData(): TodoDataApi {
     deleteTodo,
     addSubTodo,
     updateDueDate,
+    updatePriority,
+    updateLabels,
+    updateRecurrence,
     updateTitle,
     addList,
     renameList,

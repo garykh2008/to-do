@@ -56,6 +56,9 @@ export default function App() {
     deleteTodo,
     addSubTodo,
     updateDueDate,
+    updatePriority,
+    updateLabels,
+    updateRecurrence,
     updateTitle,
     addList,
     renameList,
@@ -70,6 +73,9 @@ export default function App() {
   const dragTargetRef = useRef<ResolvedDragTarget | null>(null);
 
   const visibleTodos = selectedListId ? todos.filter((t) => t.list_id === selectedListId) : todos;
+  // 標籤自動完成用：不管目前選哪個清單，都從全部 todos 找出用過的標籤，
+  // 這樣切換清單也看得到別的清單用過的標籤，跟 Todoist 的標籤是跨清單共用的概念一致。
+  const knownLabels = [...new Set(todos.flatMap((t) => t.labels))].sort();
   // 「全部」或選到 Inbox 本身時都落到 Inbox；選到別的清單就新增到那個清單，
   // 跟本機網頁版（AddTodoForm 直接帶目前頁面的 listId）行為一致。
   const addTargetList = selectedListId ? (lists.find((l) => l.id === selectedListId) ?? null) : inboxList;
@@ -194,7 +200,7 @@ export default function App() {
           <div className="flex flex-1 flex-col overflow-hidden border-t border-neutral-200">
             <QuickAddBar
               targetListName={addTargetList?.name ?? "Inbox"}
-              onAdd={(title, dueDate) => addTodo(title, dueDate, selectedListId ?? undefined)}
+              onAdd={(title, dueDate, extra) => addTodo(title, dueDate, selectedListId ?? undefined, extra)}
             />
             {loading ? (
               <div className="flex flex-1 items-center justify-center text-sm text-neutral-400">載入中…</div>
@@ -208,7 +214,11 @@ export default function App() {
                 onDelete={deleteTodo}
                 onAddSub={addSubTodo}
                 onUpdateDueDate={updateDueDate}
+                onUpdatePriority={updatePriority}
+                onUpdateLabels={updateLabels}
+                onUpdateRecurrence={updateRecurrence}
                 onUpdateTitle={updateTitle}
+                knownLabels={knownLabels}
               />
             )}
             <ListChips

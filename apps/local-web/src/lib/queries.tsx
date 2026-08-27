@@ -29,7 +29,14 @@ export function useTodosInRange(startDate: string, endDate: string): { data: Tod
 }
 
 export function useAddTodo(): {
-  mutate: (input: { listId: string; title: string; dueDate?: string | null; parentId?: string | null }) => void;
+  mutate: (input: {
+    listId: string;
+    title: string;
+    dueDate?: string | null;
+    parentId?: string | null;
+    priority?: number;
+    labels?: string[];
+  }) => void;
 } {
   const { mutate } = useLocalData();
   return {
@@ -37,7 +44,12 @@ export function useAddTodo(): {
       if (input.parentId) {
         mutate("addSubTodo", [input.parentId, input.title]);
       } else {
-        mutate("addTodo", [input.title, input.dueDate ?? null, input.listId]);
+        mutate("addTodo", [
+          input.title,
+          input.dueDate ?? null,
+          input.listId,
+          { priority: input.priority, labels: input.labels },
+        ]);
       }
     },
   };
@@ -45,7 +57,9 @@ export function useAddTodo(): {
 
 export function useUpdateTodo(): {
   mutate: (
-    input: { id: string; listId: string } & Partial<Pick<Todo, "title" | "due_date" | "is_completed">>,
+    input: { id: string; listId: string } & Partial<
+      Pick<Todo, "title" | "due_date" | "priority" | "labels" | "recurrence_rule" | "is_completed">
+    >,
   ) => void;
 } {
   const { mutate } = useLocalData();
@@ -55,6 +69,12 @@ export function useUpdateTodo(): {
         mutate("toggleComplete", [input.id, input.is_completed]);
       } else if (typeof input.title === "string") {
         mutate("updateTitle", [input.id, input.title]);
+      } else if (typeof input.priority === "number") {
+        mutate("updatePriority", [input.id, input.priority]);
+      } else if (input.labels !== undefined) {
+        mutate("updateLabels", [input.id, input.labels]);
+      } else if (input.recurrence_rule !== undefined) {
+        mutate("updateRecurrence", [input.id, input.recurrence_rule]);
       } else if (input.due_date !== undefined) {
         mutate("updateDueDate", [input.id, input.due_date]);
       }

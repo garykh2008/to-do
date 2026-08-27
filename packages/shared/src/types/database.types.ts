@@ -4,6 +4,8 @@
  *   supabase gen types typescript --schema todo > src/types/database.types.ts
  */
 
+import type { RecurrenceRule } from "../domain/recurrence";
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export interface Database {
@@ -53,6 +55,9 @@ export interface Database {
           is_completed: boolean;
           completed_at: string | null;
           due_date: string | null;
+          priority: number;
+          labels: string[];
+          recurrence_rule: RecurrenceRule | null;
           position: number;
           created_at: string;
           updated_at: string;
@@ -67,6 +72,9 @@ export interface Database {
           is_completed?: boolean;
           completed_at?: string | null;
           due_date?: string | null;
+          priority?: number;
+          labels?: string[];
+          recurrence_rule?: RecurrenceRule | null;
           position?: number;
           created_at?: string;
           updated_at?: string;
@@ -81,6 +89,9 @@ export interface Database {
           is_completed?: boolean;
           completed_at?: string | null;
           due_date?: string | null;
+          priority?: number;
+          labels?: string[];
+          recurrence_rule?: RecurrenceRule | null;
           position?: number;
           created_at?: string;
           updated_at?: string;

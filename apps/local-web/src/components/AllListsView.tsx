@@ -8,9 +8,15 @@ export function AllListsView() {
   const { data: todos, isLoading } = useAllTodos();
 
   const inbox = lists.find((l) => l.is_inbox) ?? lists[0];
+  const knownLabels = [...new Set(todos.flatMap((t) => t.labels))].sort();
 
   return (
     <div className="mx-auto flex max-w-2xl min-w-0 flex-col gap-6 p-4 md:p-8">
+      <datalist id="web-known-labels">
+        {knownLabels.map((label) => (
+          <option key={label} value={label} />
+        ))}
+      </datalist>
       <h1 className="text-2xl font-semibold text-neutral-800">所有清單</h1>
 
       {inbox && <AddTodoForm listId={inbox.id} />}

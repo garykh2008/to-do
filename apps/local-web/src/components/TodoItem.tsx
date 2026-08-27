@@ -1,8 +1,19 @@
 import { useState, type FormEvent } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { CalendarDays, ChevronDown, ChevronRight, CornerDownRight, GripVertical, Plus, Trash2 } from "lucide-react";
-import type { Todo } from "@to-do/shared";
+import { CalendarDays, ChevronDown, ChevronRight, CornerDownRight, Flag, GripVertical, Plus, Repeat, Tag, Trash2 } from "lucide-react";
+import {
+  cyclePriority,
+  describeRecurrence,
+  hashLabelToColor,
+  NO_PRIORITY,
+  parseLabelsInput,
+  priorityColor,
+  RECURRENCE_PRESETS,
+  resolveCompletion,
+  type RecurrenceRule,
+  type Todo,
+} from "@to-do/shared";
 import { useAddTodo, useDeleteTodo, useUpdateTodo } from "@/lib/queries";
 import { useDragOverState } from "@/lib/dragOverContext";
 
@@ -39,6 +50,8 @@ export function TodoItem({
   const [addingSub, setAddingSub] = useState(false);
   const [subTitle, setSubTitle] = useState("");
   const [dateEditing, setDateEditing] = useState(false);
+  const [labelsEditing, setLabelsEditing] = useState(false);
+  const [recurrenceEditing, setRecurrenceEditing] = useState(false);
 
   const dragData: TodoDragData = {
     todoId: todo.id,
@@ -129,7 +142,11 @@ export function TodoItem({
             type="checkbox"
             checked={todo.is_completed}
             onChange={(e) =>
-              updateTodo.mutate({ id: todo.id, listId: todo.list_id, is_completed: e.target.checked })
+              updateTodo.mutate({
+                id: todo.id,
+                listId: todo.list_id,
+                ...resolveCompletion(todo, e.target.checked, TODAY),
+              })
             }
             className="h-4 w-4 shrink-0 rounded"
           />
@@ -214,6 +231,58 @@ export function TodoItem({
             </button>
           )}
 
+          <button
+            type="button"
+            onClick={() => updateTodo.mutate({ id: todo.id, listId: todo.list_id, priority: cyclePriority(todo.priority) })}
+            className={`shrink-0 rounded p-1 ${priorityColor(todo.priority).text} hover:bg-neutral-100`}
+            aria-label="設定優先權"
+          >
+            <Flag size={14} fill={todo.priority === NO_PRIORITY ? "none" : "currentColor"} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLabelsEditing((v) => !v)}
+            className={`shrink-0 rounded p-1 hover:bg-neutral-100 ${todo.labels.length > 0 ? "text-accent-600" : "text-neutral-300"}`}
+            aria-label="設定標籤"
+          >
+            <Tag size={14} />
+          </button>
+
+          {recurrenceEditing ? (
+            <select
+              autoFocus
+              value={todo.recurrence_rule ? JSON.stringify(todo.recurrence_rule) : ""}
+              onChange={(e) => {
+                updateTodo.mutate({
+                  id: todo.id,
+                  listId: todo.list_id,
+                  recurrence_rule: e.target.value ? (JSON.parse(e.target.value) as RecurrenceRule) : null,
+                });
+                setRecurrenceEditing(false);
+              }}
+              onBlur={() => setRecurrenceEditing(false)}
+              className="shrink-0 rounded-md border border-accent-300 px-1 py-0.5 text-xs outline-none"
+            >
+              <option value="">不重複</option>
+              {RECURRENCE_PRESETS.map((preset) => (
+                <option key={preset.label} value={JSON.stringify(preset.rule)}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setRecurrenceEditing(true)}
+              className={`shrink-0 rounded p-1 hover:bg-neutral-100 ${todo.recurrence_rule ? "text-accent-600" : "text-neutral-300"}`}
+              aria-label="設定重複規則"
+              title={todo.recurrence_rule ? describeRecurrence(todo.recurrence_rule) : "設定重複"}
+            >
+              <Repeat size={14} />
+            </button>
+          )}
+
           {!isChild && (
             <button
               type="button"
@@ -235,6 +304,40 @@ export function TodoItem({
           </button>
         </div>
       </div>
+
+      {(labelsEditing || todo.labels.length > 0) && (
+        <div className="ml-7 flex flex-wrap items-center gap-1">
+          {labelsEditing ? (
+            <input
+              type="text"
+              autoFocus
+              list="web-known-labels"
+              defaultValue={todo.labels.join(", ")}
+              onBlur={(e) => {
+                updateTodo.mutate({ id: todo.id, listId: todo.list_id, labels: parseLabelsInput(e.currentTarget.value) });
+                setLabelsEditing(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") setLabelsEditing(false);
+              }}
+              placeholder="標籤1, 標籤2"
+              className="w-48 rounded-md border border-accent-300 px-2 py-1 text-xs outline-none"
+            />
+          ) : (
+            todo.labels.map((label) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => setLabelsEditing(true)}
+                className={`rounded px-1.5 py-0.5 text-xs ${hashLabelToColor(label).bg} ${hashLabelToColor(label).text}`}
+              >
+                {label}
+              </button>
+            ))
+          )}
+        </div>
+      )}
 
       {addingSub && (
         <form onSubmit={handleAddSub} className="ml-7 flex items-center gap-2">

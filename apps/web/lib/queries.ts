@@ -136,11 +136,15 @@ export function useAddTodo() {
       title,
       dueDate,
       parentId = null,
+      priority,
+      labels,
     }: {
       listId: string;
       title: string;
       dueDate?: string | null;
       parentId?: string | null;
+      priority?: number;
+      labels?: string[];
     }) => {
       const todos = queryClient.getQueryData<Todo[]>(queryKeys.todosByList(listId)) ?? [];
       const siblings = todos.filter((t) => t.parent_id === parentId);
@@ -152,6 +156,8 @@ export function useAddTodo() {
           parent_id: parentId,
           title,
           due_date: dueDate ?? null,
+          ...(priority !== undefined ? { priority } : {}),
+          ...(labels !== undefined ? { labels } : {}),
           position: appendPosition(lastPosition),
         })
         .select()
@@ -176,7 +182,7 @@ export function useUpdateTodo() {
       listId,
       ...changes
     }: { id: string; listId: string } & Partial<
-      Pick<Todo, "title" | "notes" | "due_date" | "is_completed">
+      Pick<Todo, "title" | "notes" | "due_date" | "priority" | "labels" | "recurrence_rule" | "is_completed">
     >) => {
       const payload: TodoUpdate = { ...changes };
       if (typeof changes.is_completed === "boolean") {
