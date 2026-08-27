@@ -1,0 +1,40 @@
+name: Build and release local widget
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build local-mode widget installer
+        run: pnpm --filter widget run package:win:local
+
+      # 手動觸發（workflow_dispatch）只把安裝檔存成 artifact 方便下載測試；
+      # 真的 push tag（v1.0.0 這種）才會建立/更新 GitHub Release 並附上安裝檔。
+      - uses: actions/upload-artifact@v4
+        with:
+          name: todo-widget-local-installer
+          path: apps/widget/release/*.exe
+
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apps/widget/release/*.exe
