@@ -11,6 +11,9 @@ import {
   MoreHorizontal,
   Plus,
   Repeat,
+  StickyNote,
+  Tag,
+  Trash2,
 } from "lucide-react";
 import {
   cyclePriority,
@@ -243,14 +246,16 @@ export function TodoItem({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => updateTodo.mutate({ id: todo.id, listId: todo.list_id, priority: cyclePriority(todo.priority) })}
-            className={`shrink-0 rounded p-1 ${priorityColor(todo.priority).text} hover:bg-neutral-100`}
-            aria-label="設定優先權"
-          >
-            <Flag size={14} fill={todo.priority === NO_PRIORITY ? "none" : "currentColor"} />
-          </button>
+          {todo.priority !== NO_PRIORITY && (
+            <button
+              type="button"
+              onClick={() => updateTodo.mutate({ id: todo.id, listId: todo.list_id, priority: cyclePriority(todo.priority) })}
+              className={`shrink-0 rounded p-1 ${priorityColor(todo.priority).text} hover:bg-neutral-100`}
+              aria-label="設定優先權"
+            >
+              <Flag size={14} fill="currentColor" />
+            </button>
+          )}
 
           {recurrenceEditing ? (
             <select
@@ -311,16 +316,30 @@ export function TodoItem({
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <div className="absolute top-full right-0 z-20 mt-1 min-w-[120px] rounded-md border border-neutral-200 bg-white py-1 text-xs whitespace-nowrap shadow-popover">
+                <div className="absolute top-full right-0 z-20 mt-1 flex items-center gap-0.5 rounded-md border border-neutral-200 bg-white p-1 shadow-popover">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateTodo.mutate({ id: todo.id, listId: todo.list_id, priority: cyclePriority(todo.priority) });
+                      setMenuOpen(false);
+                    }}
+                    className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100"
+                    aria-label="設定優先權"
+                    title="設定優先權"
+                  >
+                    <Flag size={14} />
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
                       setLabelsEditing(true);
                       setMenuOpen(false);
                     }}
-                    className="block w-full px-3 py-1.5 text-left hover:bg-neutral-100"
+                    className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100"
+                    aria-label="設定標籤"
+                    title="設定標籤"
                   >
-                    設定標籤
+                    <Tag size={14} />
                   </button>
                   <button
                     type="button"
@@ -328,9 +347,11 @@ export function TodoItem({
                       setNotesEditing(true);
                       setMenuOpen(false);
                     }}
-                    className="block w-full px-3 py-1.5 text-left hover:bg-neutral-100"
+                    className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100"
+                    aria-label="設定備註"
+                    title="設定備註"
                   >
-                    設定備註
+                    <StickyNote size={14} />
                   </button>
                   <button
                     type="button"
@@ -338,20 +359,24 @@ export function TodoItem({
                       setRecurrenceEditing(true);
                       setMenuOpen(false);
                     }}
-                    className="block w-full px-3 py-1.5 text-left hover:bg-neutral-100"
+                    className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100"
+                    aria-label="設定重複規則"
+                    title="設定重複"
                   >
-                    設定重複
+                    <Repeat size={14} />
                   </button>
-                  <div className="my-1 border-t border-neutral-100" />
+                  <div className="mx-0.5 h-4 w-px bg-neutral-200" />
                   <button
                     type="button"
                     onClick={() => {
                       deleteTodo.mutate({ id: todo.id, listId: todo.list_id });
                       setMenuOpen(false);
                     }}
-                    className="block w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-50"
+                    className="rounded p-1.5 text-red-500 hover:bg-red-50"
+                    aria-label="刪除"
+                    title="刪除"
                   >
-                    刪除
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </>
